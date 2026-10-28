@@ -1,14 +1,15 @@
 import { Routes, Route } from "react-router-dom";
 import "./App.css";
-
-
+import Login from "./pages/auth/Login";
+import ForgetPassword from "./pages/auth/ForgetPassword";
+import ResetPassword from "./pages/auth/ResetPassword";
 const App = () => {
   return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-      <h1 className="text-4xl font-bold text-amber-400">
-        Welcome to Arqemio
-      </h1>
-    </div>
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="/forgot-password" element={<ForgetPassword />} />
+      <Route path="/reset-password/:token" element={<ResetPassword />} />
+    </Routes>
   );
 };
 

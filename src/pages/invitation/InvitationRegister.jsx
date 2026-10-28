@@ -4,6 +4,7 @@ import {
   ValidateInvitation,
   RegisterInvitation,
 } from "../../services/invitation";
+import ErrorMessage from "../../components/ErrorMessage";
 
 const InvitationRegister = () => {
   const { token } = useParams();
@@ -24,8 +25,12 @@ const InvitationRegister = () => {
     const validate = async () => {
       try {
         const data = await ValidateInvitation(token);
-        setError(data.message || "This invitation is invalid or has expired.");
-        retur;
+        if (!data.success) {
+          setError(
+            data.message || "This invitation is invalid or has expired.",
+          );
+          return;
+        }
         setInvitation(data);
       } catch (err) {
         setError(
@@ -90,9 +95,11 @@ const InvitationRegister = () => {
             Invalid Invitation
           </h1>
 
-          <p className="mt-3 text-sm text-red-600">
-            {error || "This invitation is invalid or has expired."}
-          </p>
+          <div className="mt-4">
+            <ErrorMessage
+              message={error || "This invitation is invalid or has expired."}
+            />
+          </div>
 
           <button
             type="button"
@@ -177,7 +184,7 @@ const InvitationRegister = () => {
             />
           </div>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          <ErrorMessage message={error} />
 
           <button
             type="submit"

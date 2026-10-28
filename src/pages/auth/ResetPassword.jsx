@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ResetUserPassword } from "../../services/Auth";
+import ErrorMessage from "../../components/ErrorMessage";
 
 const ResetPassword = () => {
   const { token } = useParams();
@@ -80,7 +81,7 @@ const ResetPassword = () => {
             />
           </div>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          <ErrorMessage message={error} />
 
           <button
             type="submit"

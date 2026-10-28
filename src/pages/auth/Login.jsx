@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { ArrowRight, ArrowLeft, Eye, EyeOff } from "lucide-react";
-import { SignInUser} from "../../services/Auth";
+import { SignInUser } from "../../services/Auth";
+import ErrorMessage from "../../components/ErrorMessage";
 
-const Login = ({setIsAuthenticated}) => {
+const Login = ({ setIsAuthenticated }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -26,7 +27,10 @@ const Login = ({setIsAuthenticated}) => {
       setIsAuthenticated(true);
       navigate(location.state?.from || "/dashboard");
     } catch (err) {
-      setError(err.message || "Unable to sign in.");
+      setError(
+        err.response?.data?.message ||
+          "Unable to sign in. Please check your credentials.",
+      );
     } finally {
       setLoading(false);
     }
@@ -125,14 +129,7 @@ const Login = ({setIsAuthenticated}) => {
                 </Link>
               </div>
 
-              {error && (
-                <p
-                  role="alert"
-                  className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-                >
-                  {error}
-                </p>
-              )}
+              <ErrorMessage message={error} />
 
               <button
                 type="submit"

@@ -4,8 +4,9 @@ import {
   ValidateInvitation,
   AcceptInvitation,
 } from "../../services/invitation";
+import ErrorMessage from "../../components/ErrorMessage";
 
-const AcceptInvitation = () => {
+const InvitationAccept = () => {
   const { token } = useParams();
   const navigate = useNavigate();
 
@@ -114,8 +115,10 @@ const AcceptInvitation = () => {
               </>
             )}
 
-            {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
-
+            <div className="mt-4">
+              <ErrorMessage message={error} />
+            </div>
+            
             {invitation && (
               <>
                 {isLoggedIn ? (
@@ -154,4 +157,4 @@ const AcceptInvitation = () => {
   );
 };
 
-export default AcceptInvitation;
+export default InvitationAccept;

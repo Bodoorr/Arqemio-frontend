@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { ForgetPassword } from "../../services/Auth";
+import ErrorMessage from "../../components/ErrorMessage";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
@@ -98,14 +99,7 @@ const ForgotPassword = () => {
                   />
                 </div>
 
-                {error && (
-                  <p
-                    role="alert"
-                    className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-                  >
-                    {error}
-                  </p>
-                )}
+                <ErrorMessage message={error} />
 
                 <button
                   type="submit"

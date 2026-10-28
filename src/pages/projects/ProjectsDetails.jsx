@@ -589,11 +589,15 @@ const ProjectDetails = () => {
             </div>
 
             <div className="mt-6 border-t border-[#c3c8c1] pt-4">
-              <div className="mb-3 flex justify-between">
+              <div className="mb-3 flex items-center justify-between gap-3">
                 <h3 className="text-sm font-semibold">Recent Tasks</h3>
-                <span className="text-xs text-[#7a7359]">
-                  {tasksError ? "N/A" : `${activeTasks.length} tasks`}
-                </span>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/tasks?projectId=${projectId}`)}
+                  className="rounded-lg px-3 py-2 text-xs font-semibold text-[#7a7359] transition hover:bg-[#f3f5e9] hover:text-[#35362c]"
+                >
+                  View All Tasks ({tasksError ? "N/A" : activeTasks.length})
+                </button>
               </div>
 
               {tasksError ? (
@@ -601,7 +605,7 @@ const ProjectDetails = () => {
               ) : activeTasks.length === 0 ? (
                 <p className="text-sm text-[#7a7359]">No tasks yet.</p>
               ) : (
-                <div className="divide-y divide-[#e2e4e6]">
+                <div className="space-y-2">
                   {[...activeTasks]
                     .sort(
                       (a, b) =>
@@ -610,26 +614,34 @@ const ProjectDetails = () => {
                     )
                     .slice(0, 3)
                     .map((task) => (
-                      <div
+                      <button
                         key={task.id}
-                        className="flex items-center justify-between gap-3 py-3"
+                        type="button"
+                        onClick={() => navigate(`/tasks/${task.id}`)}
+                        className="group flex w-full items-center justify-between gap-3 rounded-xl border border-[#e2e4e6] bg-white px-4 py-3 text-left transition hover:border-[#b4c25b] hover:bg-[#f8f9ef]"
                       >
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-medium">
+                          <p className="truncate text-sm font-medium text-[#35362c]">
                             {task.title}
                           </p>
-                          <p className="text-xs text-[#7a7359]">
-                            {label(task.priority)}
+                          <p className="mt-1 text-xs text-[#7a7359]">
+                            {label(task.priority)} Priority
                           </p>
                         </div>
-                        <span
-                          className={`shrink-0 rounded-full px-3 py-1 text-xs ${statusColor(
-                            task.status,
-                          )}`}
-                        >
-                          {label(task.status)}
-                        </span>
-                      </div>
+
+                        <div className="flex shrink-0 items-center gap-3">
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs ${statusColor(
+                              task.status,
+                            )}`}
+                          >
+                            {label(task.status)}
+                          </span>
+                          <span className="text-lg text-[#7a7359] transition group-hover:translate-x-1">
+                            ›
+                          </span>
+                        </div>
+                      </button>
                     ))}
                 </div>
               )}
@@ -881,6 +893,7 @@ const ProjectDetails = () => {
             </div>
           </div>
         </div>
+
         {memberToRemove && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#35362c]/50 p-4">
             <div

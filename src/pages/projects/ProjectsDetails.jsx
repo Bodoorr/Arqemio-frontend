@@ -1,488 +1,697 @@
 import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import {
-  Plus,
-  Search,
-  X,
-  ArrowUpRight,
-  MapPin,
-  CalendarDays,
-  FolderKanban,
+  ArrowLeft,
+  Pencil,
+  Archive,
+  RefreshCw,
+  Users,
+  UserRound,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { CreateProject, GetProjects } from "../../services/project";
-import { GetCompanies } from "../../services/Company";
-import ErrorMessage from "../../components/ErrorMessage";
 
-const initialForm = {
-  companyId: "",
-  name: "",
-  description: "",
-  location: "",
-  startDate: "",
-  expectedEndDate: "",
-  budget: "",
-  status: "PLANNED",
-};
+import Client from "../../services/api";
+import {
+  GetProjectById,
+  UpdateProject,
+  ArchiveProject,
+} from "../../services/project";
 
-const Projects = () => {
+const ProjectDetails = () => {
+  const { projectId } = useParams();
   const navigate = useNavigate();
 
-  const [projects, setProjects] = useState([]);
-  const [companies, setCompanies] = useState([]);
+  const [project, setProject] = useState(null);
+  const [tasks, setTasks] = useState([]);
+  const [expenses, setExpenses] = useState([]);
+  const [updates, setUpdates] = useState([]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [tasksError, setTasksError] = useState(false);
+  const [expensesError, setExpensesError] = useState(false);
+  const [updatesError, setUpdatesError] = useState(false);
 
-  const [search, setSearch] = useState("");
-  const [companyFilter, setCompanyFilter] = useState("");
-  const [showModal, setShowModal] = useState(false);
-
-  const [form, setForm] = useState(initialForm);
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
-  const [formError, setFormError] = useState("");
-  const [success, setSuccess] = useState("");
 
-  const loadProjects = async () => {
+  useEffect(() => {
+    loadData();
+  }, [projectId]);
+
+  const loadData = async () => {
     setLoading(true);
     setError("");
 
     try {
-      const data = await GetProjects();
-      setProjects(Array.isArray(data) ? data : []);
+      const data = await GetProjectById(projectId);
+      setProject(data);
+      setForm(data);
     } catch (err) {
-      setError(err.response?.data?.message || "Unable to load projects.");
-    } finally {
+      setError(err.response?.data?.message || "Failed to load project.");
       setLoading(false);
+      return;
     }
+
+    const results = await Promise.allSettled([
+      Client.get("/company/projects/tasks"),
+      Client.get("/company/projects/expenses"),
+      Client.get(`/company/projects/updates/project/${projectId}`),
+    ]);
+
+    if (results[0].status === "fulfilled") {
+      setTasks(
+        results[0].value.data.filter(
+          (task) => Number(task.projectId) === Number(projectId),
+        ),
+      );
+      setTasksError(false);
+    } else {
+      setTasks([]);
+      setTasksError(true);
+    }
+
+    if (results[1].status === "fulfilled") {
+      setExpenses(
+        results[1].value.data.filter(
+          (expense) => Number(expense.projectId) === Number(projectId),
+        ),
+      );
+      setExpensesError(false);
+    } else {
+      setExpenses([]);
+      setExpensesError(true);
+    }
+
+    if (results[2].status === "fulfilled") {
+      setUpdates(results[2].value.data);
+      setUpdatesError(false);
+    } else {
+      setUpdates([]);
+      setUpdatesError(true);
+    }
+
+    setLoading(false);
   };
 
-  useEffect(() => {
-    loadProjects();
+  const activeTasks = tasks.filter((task) => task.status !== "ARCHIVED");
+  const completed = activeTasks.filter(
+    (task) => task.status === "COMPLETED",
+  ).length;
+  const inProgress = activeTasks.filter(
+    (task) => task.status === "IN_PROGRESS",
+  ).length;
 
-    const loadCompanies = async () => {
-      try {
-        const data = await GetCompanies();
-        setCompanies(Array.isArray(data) ? data : []);
-      } catch {
-        // Project listing can still work without the company list.
-      }
-    };
+  const taskProgress = activeTasks.length
+    ? Math.round((completed / activeTasks.length) * 100)
+    : 0;
 
-    loadCompanies();
-  }, []);
+  const activeExpenses = expenses.filter(
+    (expense) => expense.status !== "ARCHIVED",
+  );
 
-  const filteredProjects = projects.filter((project) => {
-    const matchesSearch = [
-      project.name,
-      project.description,
-      project.location,
-      project.companyName,
-    ].some((value) =>
-      String(value || "")
-        .toLowerCase()
-        .includes(search.toLowerCase()),
-    );
+  const totalExpenses = activeExpenses.reduce(
+    (total, expense) => total + Number(expense.amount || 0),
+    0,
+  );
 
-    const matchesCompany =
-      !companyFilter || String(project.companyId) === companyFilter;
+  const budget = Number(project?.budget || 0);
+  const remaining = budget - totalExpenses;
 
-    return matchesSearch && matchesCompany;
-  });
+  const budgetProgress =
+    budget > 0 ? Math.round((totalExpenses / budget) * 100) : 0;
+
+  const money = (amount) => `${Number(amount).toFixed(3)} BHD`;
+  const label = (value) => String(value || "").replaceAll("_", " ");
+
+  const statusColor = (status) => {
+    if (status === "COMPLETED") return "bg-[#DC5C5C] text-white";
+    if (status === "IN_PROGRESS" || status === "NORMAL") {
+      return "bg-[#d4e14b] text-[#35362c]";
+    }
+    return "bg-[#e2e4e6] text-[#35362c]";
+  };
+
+  const card = "rounded-xl border border-[#c3c8c1] bg-white p-4";
+  const input = "w-full rounded-lg border border-[#c3c8c1] p-3 text-sm";
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleCreate = async (e) => {
+  const handleUpdate = async (e) => {
     e.preventDefault();
-    setFormError("");
 
     if (form.expectedEndDate < form.startDate) {
-      setFormError("Expected end date cannot be before the start date.");
+      alert("End date cannot be before start date.");
       return;
     }
 
     setSaving(true);
 
     try {
-      await CreateProject({
-        companyId: Number(form.companyId),
-        name: form.name.trim(),
-        description: form.description.trim(),
-        location: form.location.trim(),
+      const updated = await UpdateProject(projectId, {
+        companyId: Number(project.companyId),
+        name: form.name,
+        description: form.description,
+        location: form.location,
         startDate: form.startDate,
         expectedEndDate: form.expectedEndDate,
         budget: Number(form.budget),
         status: form.status,
       });
 
-      setShowModal(false);
-      setForm(initialForm);
-      setSuccess("Project created successfully.");
-      await loadProjects();
+      setProject(updated);
+      setForm(updated);
+      setEditing(false);
     } catch (err) {
-      setFormError(err.response?.data?.message || "Unable to create project.");
+      alert(err.response?.data?.message || "Failed to update project.");
     } finally {
       setSaving(false);
     }
   };
 
-  const openModal = () => {
-    setForm(initialForm);
-    setFormError("");
-    setSuccess("");
-    setShowModal(true);
+  const handleArchive = async () => {
+    if (!window.confirm("Archive this project?")) return;
+
+    try {
+      const updated = await ArchiveProject(projectId);
+      setProject(updated);
+      setForm(updated);
+      setEditing(false);
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to archive project.");
+    }
   };
 
-  const inputClass =
-    "w-full rounded-lg border border-[#c3c8c1] bg-white px-4 py-3 text-sm outline-none focus:border-[#7a7359]";
+  if (loading) return <div className="p-8">Loading...</div>;
+
+  if (error || !project) {
+    return (
+      <div className="p-8">
+        <p>{error || "Project not found."}</p>
+        <button
+          onClick={() => navigate("/projects")}
+          className="mt-3 flex items-center gap-2 text-sm font-medium text-[#35362c] hover:underline"
+        >
+          <ArrowLeft size={16} />
+          Back to Projects
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-[#e2e4e6] px-5 py-8 text-[#35362c] md:px-12">
-      <main className="mx-auto max-w-6xl">
-        <div className="mb-10 flex flex-wrap items-end justify-between gap-5">
-          <div>
-            <p className="mb-3 text-xs uppercase tracking-[0.15em] text-[#7a7359]">
-              Workspace / Projects
-            </p>
-            <h1 className="text-4xl font-normal tracking-tight">Projects</h1>
-            <p className="mt-3 text-sm text-[#7a7359]">
-              Manage your construction projects in one place.
-            </p>
-          </div>
+    <div className="min-h-screen bg-[#e2e4e6] p-4 text-[#35362c] md:p-5">
+      <div className="mx-auto max-w-7xl space-y-3">
+        <button
+          onClick={() => navigate("/projects")}
+          className="group inline-flex items-center gap-2 text-sm font-medium text-[#35362c] transition-colors hover:text-[#7a7359]"
+        >
+          <ArrowLeft
+            size={17}
+            className="transition-transform group-hover:-translate-x-1"
+          />
+          Back to Projects
+        </button>
 
-          <button
-            type="button"
-            onClick={openModal}
-            className="flex items-center gap-2 rounded-lg bg-[#d4e14b] px-5 py-3 text-sm font-medium transition hover:brightness-95"
-          >
-            <Plus size={17} />
-            New project
-          </button>
-        </div>
+        <div className={card}>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h1 className="text-2xl font-semibold">{project.name}</h1>
 
-        {success && (
-          <p
-            role="status"
-            className="mb-6 rounded-lg border border-[#c3c8c1] bg-white/75 px-5 py-4 text-sm"
-          >
-            {success}
-          </p>
-        )}
-
-        <div className="mb-7 flex flex-wrap gap-3">
-          <div className="relative min-w-[220px] flex-1">
-            <Search
-              size={17}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-[#7a7359]"
-            />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search projects..."
-              className="w-full rounded-lg border border-[#c3c8c1] bg-white/75 py-3 pl-11 pr-4 text-sm outline-none focus:border-[#7a7359]"
-            />
-          </div>
-
-          <select
-            value={companyFilter}
-            onChange={(e) => setCompanyFilter(e.target.value)}
-            className="rounded-lg border border-[#c3c8c1] bg-white/75 px-4 py-3 text-sm outline-none"
-          >
-            <option value="">All companies</option>
-            {[
-              ...new Map(
-                projects.map((project) => [
-                  project.companyId,
-                  {
-                    companyId: project.companyId,
-                    name: project.companyName,
-                  },
-                ]),
-              ).values(),
-            ].map((company) => (
-              <option key={company.companyId} value={company.companyId}>
-                {company.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {loading ? (
-          <p className="text-sm text-[#7a7359]">Loading projects...</p>
-        ) : error ? (
-          <ErrorMessage message={error} />
-        ) : filteredProjects.length === 0 ? (
-          <div className="rounded-xl border border-[#c3c8c1] bg-white/70 px-6 py-16 text-center">
-            <FolderKanban size={35} className="mx-auto mb-4 text-[#7a7359]" />
-            <h2 className="text-lg font-medium">No projects found</h2>
-            <p className="mt-2 text-sm text-[#7a7359]">
-              {search || companyFilter
-                ? "Try adjusting your search or filters."
-                : "Your projects will appear here once created."}
-            </p>
-          </div>
-        ) : (
-          <>
-            <p className="mb-5 text-xs uppercase tracking-wider text-[#7a7359]">
-              {filteredProjects.length} projects
-            </p>
-
-            <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-              {filteredProjects.map((project) => (
-                <button
-                  key={project.projectId ?? project.id}
-                  type="button"
-                  onClick={() =>
-                    navigate(`/projects/${project.projectId ?? project.id}`)
-                  }
-                  className="group rounded-xl border border-[#c3c8c1] bg-white/75 p-6 text-left transition hover:border-[#7a7359] hover:bg-white"
-                >
-                  <div className="mb-7 flex items-start justify-between gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#e2e4e6]">
-                      <FolderKanban size={21} />
-                    </div>
-                    <ArrowUpRight
-                      size={19}
-                      className="text-[#7a7359] transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-                    />
-                  </div>
-
-                  <p className="mb-2 text-xs uppercase tracking-wider text-[#7a7359]">
-                    {project.companyName}
-                  </p>
-                  <h2 className="mb-3 text-xl font-medium">{project.name}</h2>
-                  <p className="mb-6 line-clamp-2 min-h-10 text-sm leading-6 text-[#7a7359]">
-                    {project.description || "No description provided."}
-                  </p>
-
-                  <div className="space-y-3 border-t border-[#c3c8c1] pt-5">
-                    <div className="flex items-center gap-2 text-sm text-[#7a7359]">
-                      <MapPin size={15} />
-                      {project.location || "Not provided"}
-                    </div>
-
-                    <div className="flex items-center gap-2 text-sm text-[#7a7359]">
-                      <CalendarDays size={15} />
-                      {project.expectedEndDate || "No end date"}
-                    </div>
-
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-sm font-medium">
-                        {project.budget != null
-                          ? `${Number(project.budget).toLocaleString()} BHD`
-                          : "No budget"}
-                      </span>
-                      <span className="rounded-full bg-[#e2e4e6] px-3 py-1 text-xs">
-                        {project.status}
-                      </span>
-                    </div>
-                  </div>
-                </button>
-              ))}
+              <p className="mt-1 text-sm text-[#7a7359]">
+                {project.companyName} · {project.location}
+              </p>
             </div>
-          </>
-        )}
 
-        {showModal && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-8"
-            onMouseDown={(e) => {
-              if (e.target === e.currentTarget && !saving) {
-                setShowModal(false);
-              }
-            }}
-          >
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="create-project-title"
-              className="max-h-full w-full max-w-xl overflow-y-auto rounded-xl bg-[#e2e4e6] p-6 shadow-xl md:p-8"
-            >
-              <div className="mb-7 flex items-start justify-between">
-                <div>
-                  <p className="mb-2 text-xs uppercase tracking-wider text-[#7a7359]">
-                    Project Management
-                  </p>
-                  <h2
-                    id="create-project-title"
-                    className="text-2xl font-medium"
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className={`rounded-full px-3 py-1.5 text-xs ${statusColor(project.status)}`}
+              >
+                {label(project.status)}
+              </span>
+
+              <button
+                onClick={loadData}
+                className="rounded-lg border border-[#c3c8c1] p-2"
+                title="Refresh"
+              >
+                <RefreshCw size={16} />
+              </button>
+
+              {project.status !== "ARCHIVED" && (
+                <>
+                  <button
+                    onClick={() => {
+                      setForm(project);
+                      setEditing(!editing);
+                    }}
+                    className="flex items-center gap-2 rounded-lg border border-[#c3c8c1] px-3 py-2 text-sm"
                   >
-                    Create new project
-                  </h2>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  disabled={saving}
-                  aria-label="Close"
-                >
-                  <X size={21} />
-                </button>
-              </div>
+                    <Pencil size={15} />
+                    Edit
+                  </button>
 
-              {formError && (
-                <div className="mb-5">
-                  <ErrorMessage message={formError} />
-                </div>
+                  <button
+                    onClick={handleArchive}
+                    className="flex items-center gap-2 rounded-lg bg-[#35362c] px-3 py-2 text-sm text-white"
+                  >
+                    <Archive size={15} />
+                    Archive
+                  </button>
+                </>
               )}
+            </div>
+          </div>
 
-              <form onSubmit={handleCreate} className="space-y-5">
-                <div>
-                  <label className="mb-2 block text-sm font-medium">
-                    Company
-                  </label>
-                  <select
-                    name="companyId"
-                    value={form.companyId}
-                    onChange={handleChange}
-                    required
-                    className={inputClass}
-                  >
-                    <option value="">Select company</option>
-                    {companies.map((company) => (
-                      <option key={company.companyId} value={company.companyId}>
-                        {company.name}
+          <div className="mt-4 grid grid-cols-2 border-t border-[#c3c8c1] pt-4 md:grid-cols-4">
+            {[
+              ["Total Tasks", tasksError ? "N/A" : activeTasks.length],
+              ["Completed", tasksError ? "N/A" : completed],
+              ["Total Expenses", expensesError ? "N/A" : money(totalExpenses)],
+              ["Remaining Budget", expensesError ? "N/A" : money(remaining)],
+            ].map(([title, value]) => (
+              <div key={title} className="px-3 py-2 first:pl-0">
+                <p className="text-xs text-[#7a7359]">{title}</p>
+                <p className="mt-1 text-xl font-semibold">{value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {editing && (
+          <form onSubmit={handleUpdate} className={card}>
+            <h2 className="mb-3 text-lg font-semibold">Edit Project</h2>
+
+            <div className="grid gap-3 md:grid-cols-3">
+              <input
+                name="name"
+                value={form.name || ""}
+                onChange={handleChange}
+                placeholder="Project Name"
+                required
+                className={input}
+              />
+
+              <input
+                name="location"
+                value={form.location || ""}
+                onChange={handleChange}
+                placeholder="Location"
+                required
+                className={input}
+              />
+
+              <input
+                name="budget"
+                type="number"
+                min="0"
+                step="0.001"
+                value={form.budget ?? ""}
+                onChange={handleChange}
+                placeholder="Budget"
+                required
+                className={input}
+              />
+
+              <label className="text-xs">
+                Start Date
+                <input
+                  name="startDate"
+                  type="date"
+                  value={form.startDate || ""}
+                  onChange={handleChange}
+                  required
+                  className={`mt-1 ${input}`}
+                />
+              </label>
+
+              <label className="text-xs">
+                Expected End Date
+                <input
+                  name="expectedEndDate"
+                  type="date"
+                  value={form.expectedEndDate || ""}
+                  onChange={handleChange}
+                  required
+                  className={`mt-1 ${input}`}
+                />
+              </label>
+
+              <label className="text-xs">
+                Status
+                <select
+                  name="status"
+                  value={form.status || ""}
+                  onChange={handleChange}
+                  className={`mt-1 ${input}`}
+                >
+                  {[
+                    "PLANNED",
+                    "IN_PROGRESS",
+                    "ON_HOLD",
+                    "COMPLETED",
+                    form.status,
+                  ]
+                    .filter(
+                      (status, index, list) =>
+                        status && list.indexOf(status) === index,
+                    )
+                    .map((status) => (
+                      <option key={status} value={status}>
+                        {label(status)}
                       </option>
                     ))}
-                  </select>
-                  <p className="mt-2 text-xs text-[#7a7359]">
-                    You must be an active company owner to create a project.
+                </select>
+              </label>
+
+              <textarea
+                name="description"
+                value={form.description || ""}
+                onChange={handleChange}
+                placeholder="Description"
+                rows={2}
+                className={`${input} md:col-span-3`}
+              />
+            </div>
+
+            <div className="mt-3 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setEditing(false)}
+                className="rounded-lg border border-[#c3c8c1] px-4 py-2 text-sm"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                disabled={saving}
+                className="rounded-lg bg-[#d4e14b] px-4 py-2 text-sm font-medium disabled:opacity-50"
+              >
+                {saving ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </form>
+        )}
+
+        <div className="grid gap-3 lg:grid-cols-3">
+          <div className={`${card} lg:col-span-2`}>
+            <h2 className="mb-4 text-base font-semibold">Project Overview</h2>
+
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-sm text-[#7a7359]">Task Progress</p>
+                  <p className="text-lg font-semibold">
+                    {tasksError ? "N/A" : `${taskProgress}%`}
                   </p>
                 </div>
 
-                <div>
-                  <label className="mb-2 block text-sm font-medium">
-                    Project name
-                  </label>
-                  <input
-                    name="name"
-                    value={form.name}
-                    onChange={handleChange}
-                    required
-                    className={inputClass}
-                    placeholder="Enter project name"
+                <div className="h-2 rounded-full bg-[#e2e4e6]">
+                  <div
+                    className="h-2 rounded-full bg-[#d4e14b]"
+                    style={{ width: tasksError ? "0%" : `${taskProgress}%` }}
                   />
                 </div>
 
-                <div>
-                  <label className="mb-2 block text-sm font-medium">
-                    Description
-                  </label>
-                  <textarea
-                    name="description"
-                    value={form.description}
-                    onChange={handleChange}
-                    rows={3}
-                    className={inputClass}
-                    placeholder="Describe the project"
+                <p className="mt-2 text-xs text-[#7a7359]">
+                  {tasksError
+                    ? "Unable to load tasks"
+                    : `${completed} completed · ${inProgress} in progress`}
+                </p>
+              </div>
+
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-sm text-[#7a7359]">Budget Usage</p>
+                  <p className="text-lg font-semibold">
+                    {expensesError || !budget ? "N/A" : `${budgetProgress}%`}
+                  </p>
+                </div>
+
+                <div className="h-2 rounded-full bg-[#e2e4e6]">
+                  <div
+                    className="h-2 rounded-full bg-[#d4e14b]"
+                    style={{
+                      width: expensesError
+                        ? "0%"
+                        : `${Math.min(budgetProgress, 100)}%`,
+                    }}
                   />
                 </div>
 
-                <div>
-                  <label className="mb-2 block text-sm font-medium">
-                    Location
-                  </label>
-                  <input
-                    name="location"
-                    value={form.location}
-                    onChange={handleChange}
-                    required
-                    className={inputClass}
-                    placeholder="Project location"
-                  />
-                </div>
+                <p className="mt-2 text-xs text-[#7a7359]">
+                  {expensesError
+                    ? "Unable to load expenses"
+                    : `${money(totalExpenses)} of ${money(budget)}`}
+                </p>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label className="mb-2 block text-sm font-medium">
-                      Start date
-                    </label>
-                    <input
-                      type="date"
-                      name="startDate"
-                      value={form.startDate}
-                      onChange={handleChange}
-                      required
-                      className={inputClass}
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-2 block text-sm font-medium">
-                      Expected end date
-                    </label>
-                    <input
-                      type="date"
-                      name="expectedEndDate"
-                      value={form.expectedEndDate}
-                      onChange={handleChange}
-                      min={form.startDate || undefined}
-                      required
-                      className={inputClass}
-                    />
-                  </div>
-                </div>
+                {!expensesError && remaining < 0 && (
+                  <p className="mt-1 text-xs text-[#DC5C5C]">Budget exceeded</p>
+                )}
+              </div>
+            </div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label className="mb-2 block text-sm font-medium">
-                      Budget (BHD)
-                    </label>
-                    <input
-                      type="number"
-                      name="budget"
-                      value={form.budget}
-                      onChange={handleChange}
-                      min="0"
-                      step="0.001"
-                      required
-                      className={inputClass}
-                      placeholder="0.000"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-2 block text-sm font-medium">
-                      Status
-                    </label>
-                    <select
-                      name="status"
-                      value={form.status}
-                      onChange={handleChange}
-                      className={inputClass}
-                    >
-                      <option value="PLANNED">Planned</option>
-                      <option value="IN_PROGRESS">In progress</option>
-                      <option value="COMPLETED">Completed</option>
-                      <option value="ON_HOLD">On hold</option>
-                    </select>
-                  </div>
-                </div>
+            <div className="mt-4 border-t border-[#c3c8c1] pt-3">
+              <div className="mb-2 flex items-center justify-between">
+                <h3 className="text-sm font-semibold">Recent Tasks</h3>
+                <span className="text-xs text-[#7a7359]">
+                  {tasksError ? "N/A" : `${activeTasks.length} tasks`}
+                </span>
+              </div>
 
-                <div className="flex justify-end gap-3 border-t border-[#c3c8c1] pt-6">
-                  <button
-                    type="button"
-                    onClick={() => setShowModal(false)}
-                    disabled={saving}
-                    className="rounded-lg border border-[#c3c8c1] px-5 py-3 text-sm"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="rounded-lg bg-[#d4e14b] px-6 py-3 text-sm font-medium disabled:opacity-50"
-                  >
-                    {saving ? "Creating..." : "Create project"}
-                  </button>
+              {tasksError ? (
+                <p className="text-sm text-[#7a7359]">Unable to load tasks.</p>
+              ) : activeTasks.length === 0 ? (
+                <p className="text-sm text-[#7a7359]">No tasks yet.</p>
+              ) : (
+                <div className="divide-y divide-[#e2e4e6]">
+                  {[...activeTasks]
+                    .sort(
+                      (a, b) =>
+                        new Date(b.updatedAt || b.createdAt || 0) -
+                        new Date(a.updatedAt || a.createdAt || 0),
+                    )
+                    .slice(0, 3)
+                    .map((task) => (
+                      <div
+                        key={task.id}
+                        className="flex items-center justify-between gap-3 py-2.5"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">
+                            {task.title}
+                          </p>
+                          <p className="text-xs text-[#7a7359]">
+                            {label(task.priority)}
+                          </p>
+                        </div>
+
+                        <span
+                          className={`shrink-0 rounded-full px-2.5 py-1 text-xs ${statusColor(task.status)}`}
+                        >
+                          {label(task.status)}
+                        </span>
+                      </div>
+                    ))}
                 </div>
-              </form>
+              )}
             </div>
           </div>
-        )}
-      </main>
+
+          <div className={card}>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-base font-semibold">Project Team</h2>
+              <Users size={18} className="text-[#7a7359]" />
+            </div>
+
+            <p className="mb-3 text-xs font-medium text-[#7a7359]">
+              PROJECT MANAGERS
+            </p>
+
+            {project.managers?.length > 0 ? (
+              <div className="space-y-3">
+                {project.managers.map((manager) => (
+                  <div
+                    key={manager.membershipId}
+                    className="flex items-center gap-3"
+                  >
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#d4e14b]">
+                      {manager.profileImage ? (
+                        <img
+                          src={manager.profileImage}
+                          alt={manager.userName}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <UserRound size={23} />
+                      )}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold">
+                        {manager.userName}
+                      </p>
+                      <p className="text-xs text-[#7a7359]">Project Manager</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-[#7a7359]">
+                Manager information unavailable.
+              </p>
+            )}
+
+            <div className="mt-4 border-t border-[#c3c8c1] pt-3">
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-xs font-medium text-[#7a7359]">WORKERS</p>
+
+                {project.workers && (
+                  <span className="text-xs text-[#7a7359]">
+                    {project.workers.length} members
+                  </span>
+                )}
+              </div>
+
+              {project.workers?.length > 0 ? (
+                <div className="grid grid-cols-3 gap-3">
+                  {project.workers.map((worker) => (
+                    <div
+                      key={worker.membershipId}
+                      className="flex min-w-0 flex-col items-center gap-2 text-center"
+                    >
+                      <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-[#e2e4e6]">
+                        {worker.profileImage ? (
+                          <img
+                            src={worker.profileImage}
+                            alt={worker.userName}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <UserRound size={22} />
+                        )}
+                      </div>
+
+                      <p className="w-full truncate text-xs font-medium">
+                        {worker.userName}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-[#7a7359]">
+                  Worker information unavailable.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-3 lg:grid-cols-3">
+          <div className={card}>
+            <h2 className="mb-3 text-base font-semibold">Recent Expenses</h2>
+
+            {expensesError ? (
+              <p className="text-sm text-[#7a7359]">Unable to load expenses.</p>
+            ) : activeExpenses.length === 0 ? (
+              <p className="text-sm text-[#7a7359]">No expenses yet.</p>
+            ) : (
+              <div className="divide-y divide-[#e2e4e6]">
+                {[...activeExpenses]
+                  .sort(
+                    (a, b) =>
+                      new Date(b.expenseDateTime || 0) -
+                      new Date(a.expenseDateTime || 0),
+                  )
+                  .slice(0, 3)
+                  .map((expense) => (
+                    <div
+                      key={expense.id}
+                      className="flex items-center justify-between gap-2 py-2.5"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">
+                          {expense.title}
+                        </p>
+                        <p className="text-xs text-[#7a7359]">
+                          {label(expense.category)}
+                        </p>
+                      </div>
+
+                      <p className="shrink-0 text-sm font-semibold">
+                        {money(expense.amount)}
+                      </p>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+
+          <div className={card}>
+            <h2 className="mb-3 text-base font-semibold">Project Updates</h2>
+
+            {updatesError ? (
+              <p className="text-sm text-[#7a7359]">Unable to load updates.</p>
+            ) : updates.length === 0 ? (
+              <p className="text-sm text-[#7a7359]">No updates yet.</p>
+            ) : (
+              <div className="divide-y divide-[#e2e4e6]">
+                {updates.slice(0, 3).map((update) => (
+                  <div key={update.id} className="py-2.5">
+                    <p className="text-sm font-medium">
+                      {update.title || `Update #${update.id}`}
+                    </p>
+
+                    <p className="mt-1 line-clamp-2 text-xs text-[#7a7359]">
+                      {update.description || "No description"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className={card}>
+            <h2 className="mb-3 text-base font-semibold">
+              Project Information
+            </h2>
+
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between gap-2">
+                <span className="text-[#7a7359]">Start Date</span>
+                <span>{project.startDate || "-"}</span>
+              </div>
+
+              <div className="flex justify-between gap-2">
+                <span className="text-[#7a7359]">Expected End</span>
+                <span>{project.expectedEndDate || "-"}</span>
+              </div>
+
+              <div className="flex justify-between gap-2">
+                <span className="text-[#7a7359]">Budget</span>
+                <span>{money(budget)}</span>
+              </div>
+
+              <div className="flex justify-between gap-2">
+                <span className="text-[#7a7359]">Project ID</span>
+                <span>#{project.id}</span>
+              </div>
+            </div>
+
+            <div className="mt-3 border-t border-[#c3c8c1] pt-3">
+              <p className="text-xs text-[#7a7359]">Description</p>
+              <p className="mt-1 line-clamp-3 text-sm">
+                {project.description || "No description provided."}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
 
-export default Projects;
+export default ProjectDetails;

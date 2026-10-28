@@ -1,28 +1,32 @@
 import Client from "./api";
 
-const BASE_URL = "/company/equipments";
+const BASE = "/company/equipments";
+const RESERVATIONS = `${BASE}/reservations`;
 
-export const GetAllEquipments = async () => {
-  const response = await Client.get(BASE_URL);
-  return response.data;
-};
+export const GetAllEquipments = async () => (await Client.get(BASE)).data;
 
-export const GetEquipmentById = async (equipmentId) => {
-  const response = await Client.get(`${BASE_URL}/${equipmentId}`);
-  return response.data;
-};
+export const GetEquipmentById = async (id) =>
+  (await Client.get(`${BASE}/${id}`)).data;
 
-export const CreateEquipment = async (data) => {
-  const response = await Client.post(BASE_URL, data);
-  return response.data;
-};
+export const CreateEquipment = async (data) =>
+  (await Client.post(BASE, data)).data;
 
-export const UpdateEquipment = async (equipmentId, data) => {
-  const response = await Client.put(`${BASE_URL}/${equipmentId}`, data);
-  return response.data;
-};
+export const UpdateEquipment = async (id, data) =>
+  (await Client.put(`${BASE}/${id}`, data)).data;
 
-export const ArchiveEquipment = async (equipmentId) => {
-  const response = await Client.delete(`${BASE_URL}/${equipmentId}`);
-  return response.data;
-};
+export const ArchiveEquipment = async (id) =>
+  (await Client.delete(`${BASE}/${id}`)).data;
+
+export const GetAllReservations = async () =>
+  (await Client.get(RESERVATIONS)).data;
+
+export const GetEquipmentAvailability = async (
+  equipmentId,
+  startDateTime,
+  endDateTime,
+) =>
+  (
+    await Client.get(`${RESERVATIONS}/availability/${equipmentId}`, {
+      params: { startDateTime, endDateTime },
+    })
+  ).data;

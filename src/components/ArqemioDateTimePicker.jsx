@@ -20,12 +20,16 @@ const parseDate = (value) => {
   return Number.isNaN(date.getTime()) ? null : date;
 };
 
-const ArqemioDateTimePicker = ({ value, onChange, required = false }) => {
+const ArqemioDateTimePicker = ({
+  value,
+  onChange,
+  required = false,
+  centered = false,
+}) => {
   const selected = parseDate(value);
 
   const [month, setMonth] = useState(() => {
     const date = parseDate(value) || new Date();
-
     return new Date(date.getFullYear(), date.getMonth(), 1);
   });
 
@@ -55,7 +59,6 @@ const ArqemioDateTimePicker = ({ value, onChange, required = false }) => {
   ];
 
   const hour = selected ? pad(selected.getHours()) : "09";
-
   const minute = selected ? pad(selected.getMinutes()) : "00";
 
   useEffect(() => {
@@ -70,6 +73,8 @@ const ArqemioDateTimePicker = ({ value, onChange, required = false }) => {
     if (!open) return;
 
     const updatePosition = () => {
+      if (centered) return;
+
       const element = containerRef.current;
       if (!element) return;
 
@@ -85,7 +90,6 @@ const ArqemioDateTimePicker = ({ value, onChange, required = false }) => {
       );
 
       const availableBelow = window.innerHeight - rect.bottom;
-
       const availableAbove = rect.top;
 
       const showAbove =
@@ -118,23 +122,17 @@ const ArqemioDateTimePicker = ({ value, onChange, required = false }) => {
     };
 
     document.addEventListener("mousedown", handleOutsideClick);
-
     document.addEventListener("keydown", handleKeyDown);
-
     window.addEventListener("resize", updatePosition);
-
     window.addEventListener("scroll", updatePosition, true);
 
     return () => {
       document.removeEventListener("mousedown", handleOutsideClick);
-
       document.removeEventListener("keydown", handleKeyDown);
-
       window.removeEventListener("resize", updatePosition);
-
       window.removeEventListener("scroll", updatePosition, true);
     };
-  }, [open]);
+  }, [open, centered]);
 
   const choose = (year, monthIndex, day, hours = hour, minutes = minute) => {
     onChange(`${year}-${pad(monthIndex + 1)}-${pad(day)}T${hours}:${minutes}`);
@@ -194,8 +192,9 @@ const ArqemioDateTimePicker = ({ value, onChange, required = false }) => {
             aria-label="Choose date and time"
             style={{
               position: "fixed",
-              top: position.top,
-              left: position.left,
+              top: centered ? "50%" : position.top,
+              left: centered ? "50%" : position.left,
+              transform: centered ? "translate(-50%, -50%)" : undefined,
               width: POPUP_WIDTH,
               maxWidth: "calc(100vw - 24px)",
               zIndex: 9999,

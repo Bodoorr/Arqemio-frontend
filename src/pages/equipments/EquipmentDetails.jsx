@@ -11,12 +11,13 @@ import {
   CheckCircle2,
   AlertCircle,
   LoaderCircle,
+  CalendarPlus,
 } from "lucide-react";
+import { GetEquipmentById } from "../../services/equipment";
 import {
-  GetEquipmentById,
   GetAllReservations,
   GetEquipmentAvailability,
-} from "../../services/equipment";
+} from "../../services/reservation";
 
 const formatDate = (date) =>
   new Date(date).toLocaleString("en-GB", {
@@ -29,7 +30,6 @@ const formatDate = (date) =>
 
 const localDateTime = (date) => {
   const offset = date.getTimezoneOffset() * 60000;
-
   return new Date(date.getTime() - offset).toISOString().slice(0, 16);
 };
 
@@ -240,15 +240,29 @@ const EquipmentDetails = () => {
             </p>
           </div>
 
-          <span
-            className={`rounded-full px-4 py-2 text-xs font-semibold ${
-              displayStatus === "AVAILABLE NOW"
-                ? "bg-[#d4e14b] text-[#35362c]"
-                : "bg-[#35362c] text-white"
-            }`}
-          >
-            {displayStatus.replaceAll("_", " ")}
-          </span>
+          <div className="flex flex-wrap items-center gap-3">
+            <span
+              className={`rounded-full px-4 py-2 text-xs font-semibold ${
+                displayStatus === "AVAILABLE NOW"
+                  ? "bg-[#d4e14b] text-[#35362c]"
+                  : "bg-[#35362c] text-white"
+              }`}
+            >
+              {displayStatus.replaceAll("_", " ")}
+            </span>
+
+            <button
+              type="button"
+              onClick={() =>
+                navigate(`/reservations?equipmentId=${equipmentId}&create=true`)
+              }
+              disabled={!isOperational}
+              className="flex items-center justify-center gap-2 rounded-xl bg-[#d4e14b] px-5 py-3 text-sm font-semibold text-[#35362c] transition-colors hover:bg-[#c5d33c] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <CalendarPlus size={18} />
+              Reserve Equipment
+            </button>
+          </div>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-2">
@@ -298,7 +312,6 @@ const EquipmentDetails = () => {
               <div className="mt-5 rounded-lg bg-[#e2e4e6] p-4">
                 <div className="mb-2 flex items-center gap-2">
                   <CalendarDays size={16} />
-
                   <p className="text-sm font-semibold">Next Booking</p>
                 </div>
 
@@ -377,7 +390,6 @@ const EquipmentDetails = () => {
               {new Date(endDate) <= new Date(startDate) ? (
                 <>
                   <AlertCircle size={17} className="shrink-0 text-red-700" />
-
                   <span className="text-red-700">
                     End date must be after start date.
                   </span>

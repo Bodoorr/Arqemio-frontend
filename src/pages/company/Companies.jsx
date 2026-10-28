@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, Building2, Plus, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Building2, Plus, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { GetCompanies, CreateCompany } from "../../services/Company";
 import ErrorMessage from "../../components/ErrorMessage";
@@ -31,14 +31,12 @@ const Companies = () => {
 
       if (Array.isArray(data)) {
         setCompanies(data);
-      } else if (Array.isArray(data.companies)) {
-        setCompanies(data.companies);
-      } else if (Array.isArray(data.content)) {
-        setCompanies(data.content);
       } else {
+        setCompanies([]);
         setError("The company list response was not recognized.");
       }
     } catch (err) {
+      setCompanies([]);
       setError(err.response?.data?.message || "Unable to load companies.");
     } finally {
       setLoading(false);
@@ -58,6 +56,7 @@ const Companies = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     setFormError("");
     setSuccess("");
     setSubmitting(true);
@@ -66,7 +65,9 @@ const Companies = () => {
       const data = await CreateCompany(form);
 
       setSuccess(data.message || "Company created successfully.");
+
       setShowForm(false);
+
       setForm({
         name: "",
         description: "",
@@ -111,6 +112,7 @@ const Companies = () => {
             type="button"
             onClick={() => {
               setFormError("");
+              setSuccess("");
               setShowForm(true);
             }}
             className="flex items-center gap-2 rounded-full bg-[#d4e14b] px-5 py-3 text-sm font-medium hover:brightness-95"
@@ -134,14 +136,20 @@ const Companies = () => {
         <section className="mt-6 overflow-hidden rounded-xl border border-[#c3c8c1] bg-white/75">
           <div className="grid grid-cols-[1fr_auto] border-b border-[#c3c8c1] px-6 py-5">
             <h2 className="text-base font-medium">Registered companies</h2>
+
             <span className="text-sm text-[#7a7359]">
-              {companies.length} companies
+              {companies.length}{" "}
+              {companies.length === 1 ? "company" : "companies"}
             </span>
           </div>
 
           {loading ? (
             <p className="px-6 py-12 text-center text-sm text-[#7a7359]">
               Loading companies...
+            </p>
+          ) : error ? (
+            <p className="px-6 py-12 text-center text-sm text-[#7a7359]">
+              Company list unavailable.
             </p>
           ) : companies.length === 0 ? (
             <div className="flex flex-col items-center px-6 py-16 text-center">
@@ -150,22 +158,30 @@ const Companies = () => {
                 strokeWidth={1.5}
                 className="mb-4 text-[#7a7359]"
               />
+
               <p className="font-medium">No companies to display</p>
+
               <p className="mt-2 text-sm text-[#7a7359]">
                 Create your first company to get started.
               </p>
             </div>
           ) : (
             companies.map((company) => (
-              <div
-                key={company.id}
-                className="flex flex-wrap items-center justify-between gap-4 border-b border-[#c3c8c1] px-6 py-5 last:border-b-0"
+              <button
+                key={company.companyId}
+                type="button"
+                onClick={() =>
+                  navigate(`/admin/companies/${company.companyId}`)
+                }
+                className="flex w-full flex-wrap items-center justify-between gap-4 border-b border-[#c3c8c1] px-6 py-5 text-left transition-colors hover:bg-[#e2e4e6]/50 last:border-b-0"
               >
                 <div>
                   <h3 className="font-medium">{company.name}</h3>
+
                   <p className="mt-1 text-sm text-[#7a7359]">
                     {company.location || "Location not specified"}
                   </p>
+
                   {company.description && (
                     <p className="mt-2 text-sm text-[#7a7359]">
                       {company.description}
@@ -173,10 +189,14 @@ const Companies = () => {
                   )}
                 </div>
 
-                <span className="rounded-full border border-[#c3c8c1] px-3 py-1 text-xs">
-                  {company.status || "—"}
-                </span>
-              </div>
+                <div className="flex items-center gap-4">
+                  <span className="rounded-full border border-[#c3c8c1] px-3 py-1 text-xs">
+                    {company.status || "—"}
+                  </span>
+
+                  <ArrowRight size={18} className="text-[#7a7359]" />
+                </div>
+              </button>
             ))
           )}
         </section>
@@ -195,6 +215,7 @@ const Companies = () => {
                 <p className="mb-2 text-xs uppercase tracking-widest text-[#7a7359]">
                   Platform / Companies
                 </p>
+
                 <h2 id="create-company-title" className="text-2xl font-medium">
                   New company
                 </h2>
@@ -204,6 +225,7 @@ const Companies = () => {
                 type="button"
                 onClick={() => setShowForm(false)}
                 aria-label="Close"
+                className="text-[#7a7359] hover:text-[#35362c]"
               >
                 <X size={20} />
               </button>
@@ -211,10 +233,23 @@ const Companies = () => {
 
             <form onSubmit={handleSubmit} className="space-y-5">
               {[
-                { name: "name", label: "Company name", required: true },
-                { name: "description", label: "Description" },
-                { name: "location", label: "Location" },
-                { name: "address", label: "Address" },
+                {
+                  name: "name",
+                  label: "Company name",
+                  required: true,
+                },
+                {
+                  name: "description",
+                  label: "Description",
+                },
+                {
+                  name: "location",
+                  label: "Location",
+                },
+                {
+                  name: "address",
+                  label: "Address",
+                },
               ].map((field) => (
                 <div key={field.name}>
                   <label

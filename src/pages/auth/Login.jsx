@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { HardHat, Mail, LockKeyhole, ArrowRight } from "lucide-react";
-import { login } from "../../services/Auth";
+import { Link, useNavigate } from "react-router-dom";
+import { ArrowRight, ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { SignInUser } from "../../services/Auth";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -11,6 +11,7 @@ const Login = () => {
     password: "",
   });
 
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -20,7 +21,7 @@ const Login = () => {
     setLoading(true);
 
     try {
-      await login(form);
+      await SignInUser(form);
       navigate("/dashboard", { replace: true });
     } catch (err) {
       setError(err.message || "Unable to sign in.");
@@ -30,122 +31,129 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F2F3F0] flex">
-      {/* Branding panel */}
-      <div className="hidden lg:flex lg:w-1/2 bg-[#19232B] text-white p-12 flex-col justify-between">
-        <div className="flex items-center gap-3">
-          <HardHat className="text-[#F3B43F]" size={32} />
-          <span className="text-2xl font-bold tracking-tight">ARQEMIO</span>
-        </div>
-
+    <div className="min-h-screen bg-[#e2e4e6] text-[#35362c]">
+      <main className="relative flex min-h-screen flex-col px-6 py-8 sm:px-12">
         <div>
-          <p className="text-[#F3B43F] uppercase tracking-[0.3em] text-sm mb-5">
-            Build with confidence
-          </p>
-          <h1 className="text-5xl font-semibold leading-tight max-w-lg">
-            Every project.
-            <br />
-            Every detail.
-            <br />
-            Under control.
-          </h1>
-          <p className="text-slate-400 mt-6 max-w-md">
-            One workspace to manage construction projects, teams, equipment, and
-            progress.
-          </p>
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2 text-sm text-[#7a7359] transition hover:text-[#35362c]"
+          >
+            <ArrowLeft size={16} />
+            Back to home
+          </Link>
         </div>
+        <div className="flex flex-1 items-center justify-center py-12">
+          <div className="w-full max-w-[410px]">
+            <div className="mb-9">
+              <span className="mb-3 block text-xs font-semibold uppercase tracking-[0.18em] text-[#7a7359]">
+                ARQEMIO / ACCOUNT
+              </span>
 
-        <p className="text-slate-500 text-sm">
-          © {new Date().getFullYear()} Arqemio
-        </p>
-      </div>
+              <h1 className="text-[30px] font-semibold tracking-tight">
+                Sign in
+              </h1>
 
-      {/* Login form */}
-      <div className="flex-1 flex items-center justify-center px-6 py-12">
-        <div className="w-full max-w-md">
-          <div className="lg:hidden flex items-center gap-2 mb-12">
-            <HardHat className="text-amber-500" />
-            <span className="text-xl font-bold">ARQEMIO</span>
-          </div>
+              <p className="mt-2 text-sm leading-6 text-[#7a7359]">
+                Enter your email and password to access your account.
+              </p>
+            </div>
 
-          <p className="text-amber-600 text-sm font-semibold uppercase tracking-widest mb-3">
-            Welcome back
-          </p>
-          <h2 className="text-4xl font-semibold text-[#19232B]">Sign in</h2>
-          <p className="text-slate-500 mt-3 mb-9">
-            Enter your credentials to access your workspace.
-          </p>
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div>
+                <label
+                  htmlFor="email"
+                  className="mb-2 block text-sm font-medium"
+                >
+                  Email <span className="text-red-600">*</span>
+                </label>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Email address
-              </label>
-              <div className="relative">
-                <Mail
-                  size={18}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-                />
                 <input
+                  id="email"
                   type="email"
+                  autoComplete="email"
                   required
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  placeholder="name@company.com"
-                  className="w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-12 pr-4 outline-none focus:border-amber-500"
+                  placeholder="Enter your email"
+                  className="h-12 w-full rounded-lg border border-[#c3c8c1] bg-white/75 px-4 text-sm outline-none transition placeholder:text-[#a69b88] focus:border-[#7a7359] focus:ring-2 focus:ring-[#d4e14b]/30"
                 />
               </div>
-            </div>
 
-            <div>
-              <div className="flex justify-between mb-2">
-                <label className="text-sm font-medium">Password</label>
-                <a
-                  href="/forgot-password"
-                  className="text-sm text-amber-700 hover:underline"
+              <div>
+                <label
+                  htmlFor="password"
+                  className="mb-2 block text-sm font-medium"
+                >
+                  Password <span className="text-red-600">*</span>
+                </label>
+
+                <div className="relative">
+                  <input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    required
+                    value={form.password}
+                    onChange={(e) =>
+                      setForm({ ...form, password: e.target.value })
+                    }
+                    placeholder="Enter your password"
+                    className="h-12 w-full rounded-lg border border-[#c3c8c1] bg-white/75 px-4 pr-12 text-sm outline-none transition placeholder:text-[#a69b88] focus:border-[#7a7359] focus:ring-2 focus:ring-[#d4e14b]/30"
+                  />
+
+                  <button
+                    type="button"
+                    aria-label={
+                      showPassword ? "Hide password" : "Show password"
+                    }
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-4 flex items-center text-[#7a7359] hover:text-[#35362c]"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <Link
+                  to="/forgot-password"
+                  className="text-sm font-medium text-[#35362c] underline-offset-4 hover:underline"
                 >
                   Forgot password?
-                </a>
+                </Link>
               </div>
-              <div className="relative">
-                <LockKeyhole
-                  size={18}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-                />
-                <input
-                  type="password"
-                  required
-                  value={form.password}
-                  onChange={(e) =>
-                    setForm({ ...form, password: e.target.value })
-                  }
-                  placeholder="Enter your password"
-                  className="w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-12 pr-4 outline-none focus:border-amber-500"
-                />
-              </div>
-            </div>
 
-            {error && (
-              <p role="alert" className="text-sm text-red-600">
-                {error}
-              </p>
-            )}
+              {error && (
+                <p
+                  role="alert"
+                  className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+                >
+                  {error}
+                </p>
+              )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full flex items-center justify-center gap-2 bg-[#19232B] text-white rounded-xl py-3.5 font-medium hover:bg-[#2A3944] disabled:opacity-60 transition"
-            >
-              {loading ? "Signing in..." : "Sign in"}
-              {!loading && <ArrowRight size={18} />}
-            </button>
-          </form>
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#d4e14b] text-sm font-semibold text-[#35362c] transition hover:bg-[#c5d23f] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {loading ? "Signing in..." : "Sign in"}
+                {!loading && <ArrowRight size={17} />}
+              </button>
+            </form>
 
-          <p className="mt-8 text-center text-sm text-slate-500">
-            New to Arqemio? Registration is available by invitation.
-          </p>
+            <p className="mt-8 text-center text-sm text-[#7a7359]">
+              Don't have an account?{" "}
+              <span className="font-medium text-[#35362c]">
+                Contact your company administrator for an invitation.
+              </span>
+            </p>
+          </div>
         </div>
-      </div>
+        <p className="text-center text-xs text-[#7a7359]">
+          © {new Date().getFullYear()} Arqemio. All rights reserved.
+        </p>
+      </main>
     </div>
   );
 };

@@ -26,7 +26,7 @@ export const ForgetPassword = async (email) => {
   return res.data;
 };
 
-export const ResetPassword = async (data) => {
+export const ResetUserPassword = async (data) => {
   const res = await Client.post("/auth/users/reset-password", data);
   return res.data;
 };

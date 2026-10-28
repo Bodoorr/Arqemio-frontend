@@ -22,7 +22,7 @@ const Login = () => {
 
     try {
       await SignInUser(form);
-      navigate("/dashboard", { replace: true });
+      navigate(location.state?.from || "/dashboard");
     } catch (err) {
       setError(err.message || "Unable to sign in.");
     } finally {

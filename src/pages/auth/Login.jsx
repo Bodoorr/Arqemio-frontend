@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { ArrowRight, ArrowLeft, Eye, EyeOff } from "lucide-react";
-import { SignInUser } from "../../services/Auth";
+import { SignInUser} from "../../services/Auth";
 
-const Login = () => {
+const Login = ({setIsAuthenticated}) => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [form, setForm] = useState({
     email: "",
@@ -22,6 +23,7 @@ const Login = () => {
 
     try {
       await SignInUser(form);
+      setIsAuthenticated(true);
       navigate(location.state?.from || "/dashboard");
     } catch (err) {
       setError(err.message || "Unable to sign in.");

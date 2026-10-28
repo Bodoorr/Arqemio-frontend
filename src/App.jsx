@@ -7,7 +7,7 @@ import ResetPassword from "./pages/auth/ResetPassword";
 import InvitationRegister from "./pages/invitation/InvitationRegister";
 import InvitationAccept from "./pages/invitation/InvitationAccept";
 import { SignOutUser } from "./services/Auth";
-
+import AdminDashboard from "./pages/dahsboards/AdminDashboard";
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(null);
 
@@ -44,6 +44,7 @@ const App = () => {
         element={<InvitationRegister />}
       />
       <Route path="/invitation/:token" element={<InvitationAccept />} />
+      <Route path="/admin/dashboard" element={<AdminDashboard />} />
     </Routes>
   );
 };

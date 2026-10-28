@@ -1,10 +1,11 @@
 import { Routes, Route } from "react-router-dom";
+import { useState, useEffect } from "react";
 import "./App.css";
 import Login from "./pages/auth/Login";
 import ForgetPassword from "./pages/auth/ForgetPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
 import InvitationRegister from "./pages/invitation/InvitationRegister";
-import AcceptInvitation from "./pages/invitation/AcceptInvitation";
+import InvitationAccept from "./pages/invitation/InvitationAccept";
 import { SignOutUser } from "./services/Auth";
 
 const App = () => {
@@ -42,7 +43,7 @@ const App = () => {
         path="/invitation/register/:token"
         element={<InvitationRegister />}
       />
-      <Route path="/invitation/:token" element={<AcceptInvitation />} />
+      <Route path="/invitation/:token" element={<InvitationAccept />} />
     </Routes>
   );
 };

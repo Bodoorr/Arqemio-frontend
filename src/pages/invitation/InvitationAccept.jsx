@@ -5,7 +5,7 @@ import {
   AcceptInvitation,
 } from "../../services/invitation";
 
-const AcceptInvitation = () => {
+const InvitationAccept = () => {
   const { token } = useParams();
   const navigate = useNavigate();
 
@@ -154,4 +154,4 @@ const AcceptInvitation = () => {
   );
 };
 
-export default AcceptInvitation;
+export default InvitationAccept;

@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { CreateProject, GetProjects } from "../../services/project";
-import { GetCompanies } from "../../services/Company";
 import Client from "../../services/api";
 import ErrorMessage from "../../components/ErrorMessage";
 
@@ -30,7 +29,6 @@ const Projects = () => {
 
   const [memberships, setMemberships] = useState([]);
   const [projects, setProjects] = useState([]);
-  const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -81,17 +79,7 @@ const Projects = () => {
       }
     };
 
-    const loadCompanies = async () => {
-      try {
-        const data = await GetCompanies();
-        setCompanies(Array.isArray(data) ? data : []);
-      } catch (err) {
-        console.error("Unable to load companies", err);
-      }
-    };
-
     loadProfile();
-    loadCompanies();
   }, []);
 
   const filteredProjects = projects.filter((project) => {

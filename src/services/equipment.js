@@ -30,3 +30,13 @@ export const GetEquipmentAvailability = async (
       params: { startDateTime, endDateTime },
     })
   ).data;
+
+export const UploadEquipmentImage = async (file, companyId) => {
+  const data = new FormData();
+  data.append("file", file);
+  data.append("companyId", companyId);
+
+  const response = await Client.post(`${BASE}/upload-image`, data);
+
+  return response.data.imageUrl;
+};

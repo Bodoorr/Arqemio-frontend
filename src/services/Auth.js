@@ -22,6 +22,11 @@ export const CheckToken = async () => {
 };
 
 export const ForgetPassword = async (email) => {
-    const res = await Client.post("/auth/users/forget-password", {email});
-    return res.data;
+  const res = await Client.post("/auth/users/forget-password", { email });
+  return res.data;
+};
+
+export const ResetPassword = async (data) => {
+  const res = await Client.post("/auth/users/reset-password", data);
+  return res.data;
 };

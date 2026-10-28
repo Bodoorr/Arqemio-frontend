@@ -12,7 +12,8 @@ import Companies from "./pages/company/Companies";
 import CompanyDetails from "./pages/company/CompanyDetails";
 import Projects from "./pages/projects/Projects";
 import ProjectDetails from "./pages/projects/ProjectsDetails";
-
+import Tasks from "./pages/tasks/Tasks";
+import TaskDetails from "./pages/tasks/TaskDetails";
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(null);
@@ -55,6 +56,8 @@ const App = () => {
       <Route path="/admin/companies/:companyId" element={<CompanyDetails />} />
       <Route path="/projects" element={<Projects />} />
       <Route path="/projects/:projectId" element={<ProjectDetails />} />
+      <Route path="/tasks" element={<Tasks />} />
+      <Route path="/tasks/:taskId" element={<TaskDetails />} />
     </Routes>
   );
 };

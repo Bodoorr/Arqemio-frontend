@@ -10,6 +10,7 @@ import { SignOutUser } from "./services/Auth";
 import AdminDashboard from "./pages/dahsboards/AdminDashboard";
 import Companies from "./pages/company/Companies";
 import CompanyDetails from "./pages/company/CompanyDetails";
+import Projects from "./pages/projects/ProjectsDetails";
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(null);
@@ -50,6 +51,7 @@ const App = () => {
       <Route path="/admin/dashboard" element={<AdminDashboard />} />
       <Route path="/admin/companies" element={<Companies />} />
       <Route path="/admin/companies/:companyId" element={<CompanyDetails />} />
+      <Route path="/projects" element={<Projects />} />
     </Routes>
   );
 };

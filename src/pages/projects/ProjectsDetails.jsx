@@ -1,6 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Pencil, Archive, RefreshCw, Users } from "lucide-react";
+import {
+  ArrowLeft,
+  Pencil,
+  Archive,
+  RefreshCw,
+  Users,
+  UserPlus,
+  X,
+  Trash2,
+} from "lucide-react";
 import Client from "../../services/api";
 import {
   GetProjectById,
@@ -16,6 +25,13 @@ const ProjectDetails = () => {
   const [memberships, setMemberships] = useState([]);
   const [members, setMembers] = useState([]);
   const [teamError, setTeamError] = useState(false);
+  const [availableMembers, setAvailableMembers] = useState([]);
+  const [availableError, setAvailableError] = useState(false);
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [selectedRole, setSelectedRole] = useState("MANAGER");
+  const [selectedMember, setSelectedMember] = useState("");
+  const [teamSaving, setTeamSaving] = useState(false);
+  const [memberToRemove, setMemberToRemove] = useState(null);
 
   const [tasks, setTasks] = useState([]);
   const [expenses, setExpenses] = useState([]);
@@ -48,9 +64,12 @@ const ProjectDetails = () => {
   const loadData = async () => {
     setLoading(true);
     setError("");
+    setShowAddMember(false);
 
+    let dataCompanyId;
     try {
       const data = await GetProjectById(projectId);
+      dataCompanyId = data.companyId;
       setProject(data);
       setForm(data);
     } catch (err) {
@@ -115,12 +134,91 @@ const ProjectDetails = () => {
       setTeamError(true);
     }
 
+    if (results[0].status === "fulfilled") {
+      const owner = (results[0].value.data.memberships || []).some(
+        (membership) =>
+          membership.role === "OWNER" &&
+          membership.status === "ACTIVE" &&
+          Number(membership.companyId) === Number(dataCompanyId),
+      );
+      if (owner) {
+        await loadAvailableMembers();
+      } else {
+        setAvailableMembers([]);
+      }
+    }
+
     setLoading(false);
   };
 
   useEffect(() => {
     loadData();
   }, [projectId]);
+
+  const loadAvailableMembers = async () => {
+    try {
+      const response = await Client.get(
+        `/company/projects/${projectId}/available-members`,
+      );
+      setAvailableMembers(Array.isArray(response.data) ? response.data : []);
+      setAvailableError(false);
+    } catch (err) {
+      setAvailableError(true);
+    }
+  };
+
+  const refreshTeam = async () => {
+    try {
+      const response = await Client.get(
+        `/company/projects/${projectId}/members`,
+      );
+      setMembers(Array.isArray(response.data) ? response.data : []);
+      setTeamError(false);
+    } catch (err) {
+      setTeamError(true);
+    }
+    await loadAvailableMembers();
+  };
+
+  const handleAssignMember = async (e) => {
+    e.preventDefault();
+    if (!isOwner || !selectedMember || teamSaving) return;
+    setTeamSaving(true);
+    try {
+      const type = selectedRole === "MANAGER" ? "managers" : "workers";
+      await Client.post(
+        `/company/projects/${projectId}/${type}/${selectedMember}`,
+      );
+      await refreshTeam();
+      setSelectedMember("");
+      setShowAddMember(false);
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to assign member.");
+    } finally {
+      setTeamSaving(false);
+    }
+  };
+
+  const handleRemoveMember = async () => {
+    if (!isOwner || !memberToRemove || teamSaving) return;
+    setTeamSaving(true);
+    try {
+      const type = memberToRemove.role === "MANAGER" ? "managers" : "workers";
+      await Client.delete(
+        `/company/projects/${projectId}/${type}/${memberToRemove.membershipId}`,
+      );
+      await refreshTeam();
+      setMemberToRemove(null);
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to remove member.");
+    } finally {
+      setTeamSaving(false);
+    }
+  };
+
+  const selectableMembers = availableMembers.filter(
+    (member) => member.role === selectedRole,
+  );
 
   const managers = members.filter((member) => member.role === "MANAGER");
   const workers = members.filter((member) => member.role === "WORKER");
@@ -233,15 +331,8 @@ const ProjectDetails = () => {
     },
   ];
 
-  const getMemberName = (member) =>
-    member.userName || member.name || "Unknown Member";
-
-  const getMemberImage = (member) =>
-    member.profileImage || member.profilePicture;
-
   const MemberAvatar = ({ member, manager = false }) => {
-    const name = getMemberName(member);
-    const image = getMemberImage(member);
+    const name = member.name || "Unknown Member";
 
     return (
       <div
@@ -249,21 +340,7 @@ const ProjectDetails = () => {
           manager ? "bg-[#d4e14b]" : "bg-[#e2e4e6]"
         }`}
       >
-        {image ? (
-          <img
-            src={image}
-            alt={name}
-            className="h-full w-full object-cover"
-            onError={(e) => {
-              e.currentTarget.style.display = "none";
-              e.currentTarget.parentElement.innerText = name
-                .charAt(0)
-                .toUpperCase();
-            }}
-          />
-        ) : (
-          name.charAt(0).toUpperCase()
-        )}
+        {name.charAt(0).toUpperCase()}
       </div>
     );
   };
@@ -560,77 +637,159 @@ const ProjectDetails = () => {
           </div>
 
           <div className={card}>
-            <div className="mb-5 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Project Team</h2>
-              <Users size={19} className="text-[#7a7359]" />
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold">Project Team</h2>
+                <p className="mt-1 text-xs text-[#7a7359]">
+                  {teamError
+                    ? "Team unavailable"
+                    : `${members.length} assigned members`}
+                </p>
+              </div>
+              {isOwner && project.status !== "ARCHIVED" ? (
+                <button
+                  onClick={() => {
+                    setShowAddMember(!showAddMember);
+                    setSelectedMember("");
+                  }}
+                  className="flex items-center gap-2 rounded-lg bg-[#d4e14b] px-3 py-2 text-xs font-semibold hover:bg-[#c8d63c]"
+                >
+                  {showAddMember ? <X size={15} /> : <UserPlus size={15} />}
+                  {showAddMember ? "Close" : "Add Member"}
+                </button>
+              ) : (
+                <Users size={19} className="text-[#7a7359]" />
+              )}
             </div>
+
+            {isOwner && showAddMember && project.status !== "ARCHIVED" && (
+              <form
+                onSubmit={handleAssignMember}
+                className="mb-5 rounded-xl border border-[#c3c8c1] bg-[#f7f8f5] p-4"
+              >
+                <h3 className="text-sm font-semibold">Assign to Project</h3>
+                <label className="mt-3 block text-xs font-medium">
+                  Role
+                  <select
+                    value={selectedRole}
+                    onChange={(e) => {
+                      setSelectedRole(e.target.value);
+                      setSelectedMember("");
+                    }}
+                    className={input}
+                  >
+                    <option value="MANAGER">Manager</option>
+                    <option value="WORKER">Worker</option>
+                  </select>
+                </label>
+                <label className="mt-3 block text-xs font-medium">
+                  Company Member
+                  <select
+                    value={selectedMember}
+                    onChange={(e) => setSelectedMember(e.target.value)}
+                    className={input}
+                    disabled={availableError || selectableMembers.length === 0}
+                  >
+                    <option value="">Select a member</option>
+                    {selectableMembers.map((member) => (
+                      <option
+                        key={member.membershipId}
+                        value={member.membershipId}
+                      >
+                        {member.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {availableError ? (
+                  <p className="mt-2 text-xs text-[#DC5C5C]">
+                    Unable to load available members.
+                  </p>
+                ) : selectableMembers.length === 0 ? (
+                  <p className="mt-2 text-xs text-[#7a7359]">
+                    No available {selectedRole.toLowerCase()}s.
+                  </p>
+                ) : null}
+                <button
+                  type="submit"
+                  disabled={!selectedMember || teamSaving}
+                  className="mt-4 w-full rounded-lg bg-[#35362c] px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50"
+                >
+                  {teamSaving ? "Saving..." : "Assign Member"}
+                </button>
+              </form>
+            )}
 
             {teamError ? (
               <p className="text-sm text-[#DC5C5C]">
                 Unable to load project team.
               </p>
             ) : (
-              <>
-                <p className="mb-3 text-xs font-medium tracking-wide text-[#7a7359]">
-                  PROJECT MANAGERS
-                </p>
-
-                {managers.length === 0 ? (
-                  <p className="text-sm text-[#7a7359]">
-                    No managers assigned.
-                  </p>
-                ) : (
-                  <div className="space-y-4">
-                    {managers.map((manager, index) => (
-                      <div
-                        key={manager.membershipId ?? index}
-                        className="flex items-center gap-3"
-                      >
-                        <MemberAvatar member={manager} manager />
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold">
-                            {getMemberName(manager)}
-                          </p>
-                          <p className="text-xs text-[#7a7359]">
-                            Project Manager
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div className="mt-5 border-t border-[#c3c8c1] pt-4">
-                  <div className="mb-4 flex justify-between">
-                    <p className="text-xs font-medium tracking-wide text-[#7a7359]">
-                      WORKERS
-                    </p>
-                    <span className="text-xs text-[#7a7359]">
-                      {workers.length} members
-                    </span>
-                  </div>
-
-                  {workers.length === 0 ? (
-                    <p className="text-sm text-[#7a7359]">
-                      No workers assigned.
-                    </p>
-                  ) : (
-                    <div className="grid grid-cols-3 gap-4">
-                      {workers.map((worker, index) => (
-                        <div
-                          key={worker.membershipId ?? index}
-                          className="flex min-w-0 flex-col items-center gap-2 text-center"
-                        >
-                          <MemberAvatar member={worker} />
-                          <p className="w-full truncate text-xs font-medium">
-                            {getMemberName(worker)}
-                          </p>
-                        </div>
-                      ))}
+              <div className="space-y-5">
+                {[
+                  {
+                    title: "PROJECT MANAGERS",
+                    people: managers,
+                    empty: "No managers assigned.",
+                  },
+                  {
+                    title: "WORKERS",
+                    people: workers,
+                    empty: "No workers assigned.",
+                  },
+                ].map((group, index) => (
+                  <div
+                    key={group.title}
+                    className={index ? "border-t border-[#e2e4e6] pt-5" : ""}
+                  >
+                    <div className="mb-3 flex items-center justify-between">
+                      <p className="text-xs font-semibold tracking-wide text-[#7a7359]">
+                        {group.title}
+                      </p>
+                      <span className="rounded-full bg-[#e2e4e6] px-2.5 py-1 text-xs">
+                        {group.people.length}
+                      </span>
                     </div>
-                  )}
-                </div>
-              </>
+                    {group.people.length === 0 ? (
+                      <p className="text-sm text-[#7a7359]">{group.empty}</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {group.people.map((member) => (
+                          <div
+                            key={member.membershipId}
+                            className="flex items-center gap-3 rounded-lg border border-[#e2e4e6] p-2.5"
+                          >
+                            <MemberAvatar
+                              member={member}
+                              manager={member.role === "MANAGER"}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-semibold">
+                                {member.name}
+                              </p>
+                              <p className="text-xs text-[#7a7359]">
+                                {member.role === "MANAGER"
+                                  ? "Project Manager"
+                                  : "Worker"}
+                              </p>
+                            </div>
+                            {isOwner && project.status !== "ARCHIVED" && (
+                              <button
+                                onClick={() => setMemberToRemove(member)}
+                                disabled={teamSaving}
+                                title={`Remove ${member.name}`}
+                                className="rounded-lg p-2 text-[#7a7359] hover:bg-[#fff0f0] hover:text-[#DC5C5C] disabled:opacity-50"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </div>
@@ -722,6 +881,49 @@ const ProjectDetails = () => {
             </div>
           </div>
         </div>
+        {memberToRemove && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#35362c]/50 p-4">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="remove-member-title"
+              className="w-full max-w-md rounded-2xl border border-[#c3c8c1] bg-white p-6 shadow-2xl"
+            >
+              <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-red-50 text-[#DC5C5C]">
+                <Trash2 size={22} />
+              </div>
+              <h2 id="remove-member-title" className="text-xl font-semibold">
+                Remove team member?
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-[#7a7359]">
+                Are you sure you want to remove{" "}
+                <span className="font-semibold text-[#35362c]">
+                  {memberToRemove.name}
+                </span>{" "}
+                from this project? They will no longer be assigned to the
+                project.
+              </p>
+              <div className="mt-7 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setMemberToRemove(null)}
+                  disabled={teamSaving}
+                  className="rounded-lg border border-[#c3c8c1] px-5 py-2.5 text-sm font-medium transition hover:bg-[#e2e4e6] disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRemoveMember}
+                  disabled={teamSaving}
+                  className="rounded-lg bg-[#DC5C5C] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-red-700 disabled:opacity-50"
+                >
+                  {teamSaving ? "Removing..." : "Remove Member"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

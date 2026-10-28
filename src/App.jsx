@@ -9,6 +9,8 @@ import InvitationAccept from "./pages/invitation/InvitationAccept";
 import { SignOutUser } from "./services/Auth";
 import AdminDashboard from "./pages/dahsboards/AdminDashboard";
 import Companies from "./pages/company/Companies";
+import CompanyDetails from "./pages/company/CompanyDetails";
+
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(null);
 
@@ -47,6 +49,7 @@ const App = () => {
       <Route path="/invitation/:token" element={<InvitationAccept />} />
       <Route path="/admin/dashboard" element={<AdminDashboard />} />
       <Route path="/admin/companies" element={<Companies />} />
+      <Route path="/admin/companies/:companyId" element={<CompanyDetails />} />
     </Routes>
   );
 };

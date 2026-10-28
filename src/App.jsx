@@ -13,6 +13,7 @@ import CompanyDetails from "./pages/company/CompanyDetails";
 import Projects from "./pages/projects/Projects";
 import ProjectDetails from "./pages/projects/ProjectsDetails";
 
+
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(null);
 

@@ -24,6 +24,7 @@ import CustomerRegister from "./pages/customer/CustomerRegister";
 import CustomerDashboard from "./pages/dahsboards/CustomerDashboard";
 import DashboardLayout from "./components/DashboardLayout";
 import AuditLogs from "./pages/audit/AuditLogs";
+import Profile from "./pages/profile/Profile";
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(null);
@@ -81,6 +82,11 @@ const App = () => {
           path="/admin/audit-logs"
           element={<AuditLogs role="PLATFORM_ADMIN" />}
         />
+        <Route path="/admin/profile" element={<Profile />} />
+        <Route path="/owner/profile" element={<Profile />} />
+        <Route path="/manager/profile" element={<Profile />} />
+        <Route path="/worker/profile" element={<Profile />} />
+        <Route path="/customer/profile" element={<Profile />} />
       </Route>
     </Routes>
   );

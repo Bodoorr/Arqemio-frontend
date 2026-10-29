@@ -9,7 +9,7 @@ const Sidebar = ({
   mobileOpen,
   setMobileOpen,
 }) => {
-  const navigation = navigationByRole[role] || [];
+  const navigation = navigationByRole()[role] || [];
   const renderLinks = () =>
     navigation.map(({ label, path, icon: Icon }) => (
       <NavLink

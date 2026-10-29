@@ -4,6 +4,18 @@ import { Building2, Bell, UserRound, LogIn, Menu } from "lucide-react";
 const Navbar = ({ isAuthenticated = false, user = null, onMenuClick }) => {
   const navigate = useNavigate();
 
+  const profilePaths = {
+    PLATFORM_ADMIN: "/admin/profile",
+    OWNER: "/owner/profile",
+    MANAGER: "/manager/profile",
+    WORKER: "/worker/profile",
+    CUSTOMER: "/customer/profile",
+  };
+
+  const handleProfileClick = () => {
+    navigate(profilePaths[user?.role] || "/login");
+  };
+
   return (
     <header className="flex h-20 shrink-0 items-center justify-between px-5 sm:px-8 lg:px-10">
       <Link to="/" className="flex items-center gap-3">
@@ -42,7 +54,7 @@ const Navbar = ({ isAuthenticated = false, user = null, onMenuClick }) => {
 
           <button
             type="button"
-            onClick={() => navigate("/profile")}
+            onClick={handleProfileClick}
             className="flex items-center gap-3 rounded-full p-1 transition hover:bg-[#e2e4e6]"
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#e2e4e6]">
@@ -54,7 +66,7 @@ const Navbar = ({ isAuthenticated = false, user = null, onMenuClick }) => {
                 {user?.name || "My Account"}
               </p>
               <p className="text-xs capitalize text-[#7a7359]">
-                {user?.role?.toLowerCase() || "Member"}
+                {user?.role?.toLowerCase().replaceAll("_", " ") || "Member"}
               </p>
             </div>
           </button>

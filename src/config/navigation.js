@@ -2,12 +2,14 @@ import {
   LayoutDashboard,
   Building2,
   FolderKanban,
-  Users,
-  Wrench,
+  HardHat,
   Wallet,
   ClipboardList,
   ScrollText,
   UserRound,
+  History,
+  CalendarDays,
+  Activity,
 } from "lucide-react";
 
 export const navigationByRole = () => ({
@@ -21,27 +23,29 @@ export const navigationByRole = () => ({
   OWNER: [
     { label: "Dashboard", path: "/owner/dashboard", icon: LayoutDashboard },
     { label: "Projects", path: "/projects", icon: FolderKanban },
-    { label: "Team", path: "/team", icon: Users },
-    { label: "Equipment", path: "/equipment", icon: Wrench },
+    { label: "Tasks", path: "/tasks", icon: ClipboardList },
+    { label: "Equipment", path: "/equipment", icon: HardHat },
+    { label: "Reservations", path: "/reservations", icon: CalendarDays },
     { label: "Expenses", path: "/expenses", icon: Wallet },
-    { label: "Audit Logs", path: "/owner/audit-logs", icon: ScrollText },
+    { label: "Project Updates", path: "/updates", icon: Activity },
+    { label: "Audit Logs", path: "/owner/audit-logs", icon: History },
     { label: "Profile", path: "/owner/profile", icon: UserRound },
   ],
 
   MANAGER: [
     { label: "Dashboard", path: "/manager/dashboard", icon: LayoutDashboard },
     { label: "Projects", path: "/projects", icon: FolderKanban },
-    { label: "Team", path: "/team", icon: Users },
     { label: "Project Updates", path: "/project-updates", icon: ClipboardList },
     { label: "Expenses", path: "/expenses", icon: Wallet },
+    { label: "Equipment", path: "/equipment", icon: HardHat },
     { label: "Profile", path: "/manager/profile", icon: UserRound },
   ],
 
   WORKER: [
     { label: "Dashboard", path: "/worker/dashboard", icon: LayoutDashboard },
-    { label: "My Projects", path: "/projects", icon: FolderKanban },
-    { label: "My Tasks", path: "/tasks", icon: ClipboardList },
+    { label: "Projects", path: "/projects", icon: FolderKanban },
     { label: "Project Updates", path: "/project-updates", icon: ClipboardList },
+    { label: "Equipment", path: "/equipment", icon: HardHat },
     { label: "Profile", path: "/worker/profile", icon: UserRound },
   ],
 

@@ -1,6 +1,7 @@
-import { NavLink } from "react-router-dom";
-import { PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
+import { NavLink, useNavigate } from "react-router-dom";
+import { PanelLeftClose, PanelLeftOpen, X, LogOut } from "lucide-react";
 import { navigationByRole } from "../config/navigation";
+import { SignOutUser } from "../services/Auth";
 
 const Sidebar = ({
   role,
@@ -9,7 +10,17 @@ const Sidebar = ({
   mobileOpen,
   setMobileOpen,
 }) => {
+  const navigate = useNavigate();
   const navigation = navigationByRole()[role] || [];
+
+  const handleLogout = () => {
+    SignOutUser();
+    sessionStorage.removeItem("activeMembershipId");
+    setMobileOpen(false);
+    navigate("/login", { replace: true });
+    window.location.reload();
+  };
+
   const renderLinks = () =>
     navigation.map(({ label, path, icon: Icon }) => (
       <NavLink
@@ -77,6 +88,20 @@ const Sidebar = ({
         </div>
 
         <nav className="flex flex-1 flex-col gap-1">{renderLinks()}</nav>
+
+        <div className="mt-auto border-t border-[#e2e4e6] pt-3">
+          <button
+            type="button"
+            onClick={handleLogout}
+            title={collapsed ? "Logout" : undefined}
+            className={`flex h-11 w-full items-center gap-3 rounded-xl px-3 text-sm font-medium text-[#b45353] transition-colors hover:bg-[#fce8e8] ${
+              collapsed ? "lg:justify-center" : ""
+            }`}
+          >
+            <LogOut size={19} className="shrink-0" />
+            <span className={collapsed ? "lg:hidden" : ""}>Logout</span>
+          </button>
+        </div>
       </aside>
     </>
   );

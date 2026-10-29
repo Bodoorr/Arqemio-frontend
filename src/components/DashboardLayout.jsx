@@ -1,30 +1,17 @@
 import { useState, useCallback } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import Navbar from "./Navbar";
 import Sidebar from "./Sidebar";
 import NotificationListener from "./NotificationListener";
 
-const DashboardLayout = () => {
+const DashboardLayout = ({ role, profile }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
-  const { pathname } = useLocation();
-
-  const role = pathname.startsWith("/admin")
-    ? "PLATFORM_ADMIN"
-    : pathname.startsWith("/owner")
-      ? "OWNER"
-      : pathname.startsWith("/manager")
-        ? "MANAGER"
-        : pathname.startsWith("/worker")
-          ? "WORKER"
-          : pathname.startsWith("/customer")
-            ? "CUSTOMER"
-            : null;
 
   const user = {
-    name: "My Account",
-    role,
+    name: profile?.name || "My Account",
+    role: role,
   };
 
   const handleNotification = useCallback((message) => {

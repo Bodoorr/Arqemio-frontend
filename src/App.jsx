@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import "./App.css";
 import Login from "./pages/auth/Login";
@@ -27,28 +27,125 @@ import AuditLogs from "./pages/audit/AuditLogs";
 import Profile from "./pages/profile/Profile";
 import { Toaster } from "sonner";
 import OwnerDashboard from "./pages/dahsboards/OwnerDashboard";
+import Client from "./services/api";
 
 const App = () => {
+  const navigate = useNavigate();
+
   const [isAuthenticated, setIsAuthenticated] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [role, setRole] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    checkToken();
-  }, []);
+    if (isAuthenticated === null || isAuthenticated === true) {
+      checkToken();
+    }
+  }, [isAuthenticated]);
 
-  const checkToken = () => {
+  const checkToken = async () => {
     const token = localStorage.getItem("token");
 
-    if (token) {
-      setIsAuthenticated(true);
-    } else {
+    if (!token) {
       setIsAuthenticated(false);
+      setCurrentUser(null);
+      setRole(null);
+      setLoading(false);
+      console.error("Profile request failed:", error.response?.status, error);
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await Client.get("/users/profile");
+      const user = response.data;
+
+      const memberships = (user.memberships || []).filter(
+        (membership) => membership.status === "ACTIVE",
+      );
+
+      const activeMembershipId = sessionStorage.getItem("activeMembershipId");
+
+      const activeMembership = memberships.find(
+        (membership) => String(membership.id) === activeMembershipId,
+      );
+
+      let currentRole = null;
+
+      if (
+        user.role === "PLATFORM_ADMIN" ||
+        user.platformRole === "PLATFORM_ADMIN"
+      ) {
+        currentRole = "PLATFORM_ADMIN";
+      } else if (activeMembership) {
+        currentRole = activeMembership.role;
+      } else if (memberships.length === 1) {
+        currentRole = memberships[0].role;
+      } else if (memberships.length === 0 && user.isCustomer) {
+        currentRole = "CUSTOMER";
+      }
+
+      setCurrentUser(user);
+      setRole(currentRole);
+      setIsAuthenticated(true);
+    } catch (error) {
+      setCurrentUser(null);
+      setRole(null);
+      setIsAuthenticated(false);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleLogOut = () => {
     SignOutUser();
+    sessionStorage.removeItem("activeMembershipId");
     setIsAuthenticated(false);
+    setCurrentUser(null);
+    setRole(null);
     navigate("/login");
+  };
+
+  const protect = (component, allowedRoles) => {
+    if (loading || isAuthenticated === null) {
+      return (
+        <div className="flex min-h-screen items-center justify-center bg-[#f5f6f3]">
+          <p className="text-sm text-[#7a7359]">Loading...</p>
+        </div>
+      );
+    }
+
+    if (!isAuthenticated) {
+      return <Navigate to="/login" replace />;
+    }
+
+    if (!role || !allowedRoles.includes(role)) {
+      return <Navigate to="/unauthorized" replace />;
+    }
+
+    return component;
+  };
+
+  const companyRoles = ["OWNER", "MANAGER", "WORKER"];
+  const managementRoles = ["OWNER", "MANAGER"];
+  const allRoles = ["PLATFORM_ADMIN", "OWNER", "MANAGER", "WORKER", "CUSTOMER"];
+
+  const getDashboardPath = () => {
+    switch (role) {
+      case "PLATFORM_ADMIN":
+        return "/admin/dashboard";
+      case "OWNER":
+        return "/owner/dashboard";
+      case "MANAGER":
+        return "/projects";
+      case "WORKER":
+        return "/projects";
+      case "CUSTOMER":
+        return "/customer/dashboard";
+      default:
+        return "/unauthorized";
+    }
   };
 
   return (
@@ -68,51 +165,174 @@ const App = () => {
           },
         }}
       />
+
       <Routes>
         <Route
           path="/login"
-          element={<Login setIsAuthenticated={setIsAuthenticated} />}
+          element={
+            loading ? (
+              <p>Loading...</p>
+            ) : isAuthenticated && role ? (
+              <Navigate to={getDashboardPath()} replace />
+            ) : (
+              <Login setIsAuthenticated={setIsAuthenticated} />
+            )
+          }
         />
+
         <Route path="/forgot-password" element={<ForgetPassword />} />
+
         <Route path="/reset-password/:token" element={<ResetPassword />} />
+
         <Route
           path="/invitation/register/:token"
           element={<InvitationRegister />}
         />
+
         <Route path="/invitation/:token" element={<InvitationAccept />} />
-        <Route path="/admin/companies" element={<Companies />} />
-        <Route
-          path="/admin/companies/:companyId"
-          element={<CompanyDetails />}
-        />
-        <Route path="/projects" element={<Projects />} />
-        <Route path="/projects/:projectId" element={<ProjectDetails />} />
-        <Route path="/tasks" element={<Tasks />} />
-        <Route path="/tasks/:taskId" element={<TaskDetails />} />
-        <Route path="/equipment" element={<Equipment />} />
-        <Route path="/equipment/:equipmentId" element={<EquipmentDetails />} />
-        <Route path="/reservations" element={<Reservations />} />
-        <Route path="/expenses" element={<Expenses />} />
-        <Route path="/updates" element={<ProjectUpdates />} />
+
         <Route path="/project-preview/:token" element={<ProjectPreview />} />
+
         <Route
           path="/customer/register/:token"
           element={<CustomerRegister />}
         />
-        <Route path="/customer/dashboard" element={<CustomerDashboard />} />
-        <Route element={<DashboardLayout />}>
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+
+        <Route
+          element={protect(
+            <DashboardLayout role={role} profile={currentUser} />,
+            allRoles,
+          )}
+        >
+          <Route
+            path="/admin/dashboard"
+            element={protect(<AdminDashboard />, ["PLATFORM_ADMIN"])}
+          />
+
           <Route
             path="/admin/audit-logs"
-            element={<AuditLogs role="PLATFORM_ADMIN" />}
+            element={protect(<AuditLogs role="PLATFORM_ADMIN" />, [
+              "PLATFORM_ADMIN",
+            ])}
           />
-          <Route path="/admin/profile" element={<Profile />} />
-          <Route path="/owner/profile" element={<Profile />} />
-          <Route path="/manager/profile" element={<Profile />} />
-          <Route path="/worker/profile" element={<Profile />} />
-          <Route path="/customer/profile" element={<Profile />} />
-          <Route path="/owner/dashboard" element={<OwnerDashboard />} />
+
+          <Route
+            path="/admin/companies"
+            element={protect(<Companies />, ["PLATFORM_ADMIN"])}
+          />
+
+          <Route
+            path="/admin/companies/:companyId"
+            element={protect(<CompanyDetails />, ["PLATFORM_ADMIN"])}
+          />
+
+          <Route
+            path="/owner/dashboard"
+            element={protect(<OwnerDashboard />, ["OWNER"])}
+          />
+
+          <Route
+            path="/customer/dashboard"
+            element={protect(<CustomerDashboard />, ["CUSTOMER"])}
+          />
+
+          <Route
+            path="/projects"
+            element={protect(<Projects />, companyRoles)}
+          />
+
+          <Route
+            path="/projects/:projectId"
+            element={protect(<ProjectDetails />, companyRoles)}
+          />
+
+          <Route path="/tasks" element={protect(<Tasks />, companyRoles)} />
+
+          <Route
+            path="/tasks/:taskId"
+            element={protect(<TaskDetails />, companyRoles)}
+          />
+
+          <Route
+            path="/equipment"
+            element={protect(<Equipment />, companyRoles)}
+          />
+
+          <Route
+            path="/equipment/:equipmentId"
+            element={protect(<EquipmentDetails />, companyRoles)}
+          />
+
+          <Route
+            path="/reservations"
+            element={protect(<Reservations />, managementRoles)}
+          />
+
+          <Route
+            path="/expenses"
+            element={protect(<Expenses />, managementRoles)}
+          />
+
+          <Route
+            path="/updates"
+            element={protect(<ProjectUpdates />, companyRoles)}
+          />
+
+          <Route
+            path="/admin/profile"
+            element={protect(<Profile />, ["PLATFORM_ADMIN"])}
+          />
+
+          <Route
+            path="/owner/profile"
+            element={protect(<Profile />, ["OWNER"])}
+          />
+
+          <Route
+            path="/manager/profile"
+            element={protect(<Profile />, ["MANAGER"])}
+          />
+
+          <Route
+            path="/worker/profile"
+            element={protect(<Profile />, ["WORKER"])}
+          />
+
+          <Route
+            path="/customer/profile"
+            element={protect(<Profile />, ["CUSTOMER"])}
+          />
+
+          <Route
+            path="/owner/audit-logs"
+            element={protect(<AuditLogs role="OWNER" />, ["OWNER"])}
+          />
         </Route>
+
+        <Route
+          path="/unauthorized"
+          element={
+            <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-[#f5f6f3]">
+              <h1 className="text-3xl font-bold text-[#35362c]">
+                Access Denied
+              </h1>
+
+              <p className="text-sm text-[#7a7359]">
+                You don't have permission to access this page.
+              </p>
+
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="rounded-xl bg-[#d4e14b] px-5 py-2.5 font-semibold text-[#35362c]"
+              >
+                Go Back
+              </button>
+            </div>
+          }
+        />
+
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </>
   );

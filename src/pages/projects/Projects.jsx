@@ -180,10 +180,10 @@ const Projects = () => {
   };
 
   const inputClass =
-    "w-full rounded-lg border border-[#c3c8c1] bg-transparent px-4 py-3 text-sm outline-none focus:border-[#7a7359]";
+    "w-full rounded-lg border border-[#c3c8c1] bg-[#e2e4e6] px-4 py-3 text-sm outline-none focus:border-[#7a7359]";
 
   return (
-    <div className="min-h-screen bg-[#e2e4e6] px-5 py-8 text-[#35362c] md:px-12">
+    <div className="min-h-screen bg-transparent px-5 py-8 text-[#35362c] md:px-12">
       <main className="mx-auto max-w-6xl">
         <div className="mb-10 flex flex-wrap items-end justify-between gap-5">
           <div>

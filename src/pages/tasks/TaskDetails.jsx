@@ -21,6 +21,7 @@ import {
 
 const input =
   "w-full rounded-lg border border-[#c3c8c1] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#a9b82b]";
+
 const card = "rounded-2xl border border-[#c3c8c1] bg-white p-6";
 
 const format = (value) => String(value || "").replaceAll("_", " ");
@@ -62,7 +63,7 @@ const TaskDetails = () => {
   const [memberships, setMemberships] = useState([]);
   const [project, setProject] = useState(null);
   const [assigned, setAssigned] = useState([]);
-  const [workerId, setWorkerId] = useState("");
+  const [selectedWorkers, setSelectedWorkers] = useState([]);
   const [status, setStatus] = useState("");
   const [toRemove, setToRemove] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -84,6 +85,7 @@ const TaskDetails = () => {
 
     try {
       const taskResponse = await GetTaskById(taskId);
+
       setTask(taskResponse);
       setStatus(taskResponse.status);
       setEditing(false);
@@ -104,13 +106,17 @@ const TaskDetails = () => {
         Client.get("/users/profile"),
       ]);
 
-      if (results[0].status === "fulfilled") setProject(results[0].value.data);
+      if (results[0].status === "fulfilled") {
+        setProject(results[0].value.data);
+      }
 
-      if (results[1].status === "fulfilled")
+      if (results[1].status === "fulfilled") {
         setMembers(results[1].value.data || []);
+      }
 
-      if (results[2].status === "fulfilled")
+      if (results[2].status === "fulfilled") {
         setMemberships(results[2].value.data.memberships || []);
+      }
     } catch (err) {
       setError(err.response?.data?.message || "Unable to load task.");
     } finally {
@@ -161,27 +167,71 @@ const TaskDetails = () => {
       ),
   );
 
-  const assignWorker = async () => {
-    if (!workerId || saving) return;
+  const assignWorkers = async () => {
+    if (selectedWorkers.length === 0 || saving) return;
 
     setSaving(true);
     setError("");
 
-    try {
-      await AssignTaskWorker(taskId, {
-        workerMembershipId: Number(workerId),
-        assignedAt: null,
-        dueAt: task.dueDateTime || null,
-      });
+    const startTime = performance.now();
 
-      const worker = members.find(
-        (m) => Number(m.membershipId) === Number(workerId),
+    try {
+      const results = await Promise.allSettled(
+        selectedWorkers.map((id) =>
+          AssignTaskWorker(taskId, {
+            workerMembershipId: Number(id),
+            assignedAt: null,
+            dueAt: task.dueDateTime || null,
+          }),
+        ),
       );
 
-      setAssigned((previous) => [...previous, worker]);
-      setWorkerId("");
+      const successfulWorkers = selectedWorkers.filter(
+        (_, index) => results[index].status === "fulfilled",
+      );
+
+      const failedResults = results.filter(
+        (result) => result.status === "rejected",
+      );
+
+      const newWorkers = members.filter((member) =>
+        successfulWorkers.some(
+          (id) => Number(id) === Number(member.membershipId),
+        ),
+      );
+
+      setAssigned((previous) => [
+        ...previous,
+        ...newWorkers.filter(
+          (worker) =>
+            !previous.some(
+              (existing) =>
+                Number(existing.membershipId) === Number(worker.membershipId),
+            ),
+        ),
+      ]);
+
+      setSelectedWorkers([]);
+
+      console.log("Concurrent task assignment results:", {
+        taskId,
+        requested: results.length,
+        successful: successfulWorkers.length,
+        failed: failedResults.length,
+        durationMs: Math.round(performance.now() - startTime),
+      });
+
+      if (failedResults.length > 0) {
+        const firstError = failedResults[0].reason?.response?.data?.message;
+
+        setError(
+          `${successfulWorkers.length} worker(s) assigned successfully. ` +
+            `${failedResults.length} assignment(s) failed.` +
+            (firstError ? ` ${firstError}` : ""),
+        );
+      }
     } catch (err) {
-      setError(err.response?.data?.message || "Unable to assign worker.");
+      setError(err.response?.data?.message || "Unable to assign workers.");
     } finally {
       setSaving(false);
     }
@@ -199,6 +249,7 @@ const TaskDetails = () => {
       setAssigned((previous) =>
         previous.filter((m) => m.membershipId !== toRemove.membershipId),
       );
+
       setToRemove(null);
     } catch (err) {
       setError(err.response?.data?.message || "Unable to remove worker.");
@@ -209,6 +260,7 @@ const TaskDetails = () => {
 
   const saveTask = async (event) => {
     event.preventDefault();
+
     if (saving || !task) return;
 
     if (!form.dueDateTime) {
@@ -282,6 +334,7 @@ const TaskDetails = () => {
                 <p className="text-sm font-medium text-[#7a7359]">
                   {task.projectName}
                 </p>
+
                 <h1 className="mt-1 text-3xl font-bold">{task.title}</h1>
               </div>
 
@@ -298,6 +351,7 @@ const TaskDetails = () => {
                           ? task.dueDateTime.slice(0, 16)
                           : "",
                       });
+
                       setEditing(true);
                     }}
                     className="flex items-center gap-2 rounded-lg bg-[#d4e14b] px-4 py-2 text-sm font-semibold"
@@ -367,6 +421,7 @@ const TaskDetails = () => {
                 {task.status !== "ARCHIVED" && (
                   <div className="mt-6 border-t border-[#e2e4e6] pt-5">
                     <h3 className="font-semibold">Update Status</h3>
+
                     <p className="mt-1 text-xs text-[#7a7359]">
                       Only workers assigned to this task can update its status.
                     </p>
@@ -417,6 +472,7 @@ const TaskDetails = () => {
                           name={member.name}
                           picture={member.profilePicture || member.profileImage}
                         />
+
                         <span className="truncate text-sm font-medium">
                           {member.name}
                         </span>
@@ -436,29 +492,99 @@ const TaskDetails = () => {
 
                 {canManage && task.status !== "ARCHIVED" && (
                   <div className="mt-5 space-y-3 border-t border-[#e2e4e6] pt-4">
-                    <select
-                      className={input}
-                      value={workerId}
-                      onChange={(e) => setWorkerId(e.target.value)}
-                    >
-                      <option value="">Select a project worker</option>
-                      {availableWorkers.map((member) => (
-                        <option
-                          key={member.membershipId}
-                          value={member.membershipId}
+                    <p className="text-sm font-medium">
+                      Select workers to assign
+                    </p>
+
+                    <div className="max-h-48 space-y-2 overflow-y-auto rounded-lg border border-[#c3c8c1] bg-white p-3">
+                      {availableWorkers.length === 0 ? (
+                        <p className="text-sm text-[#7a7359]">
+                          No available workers.
+                        </p>
+                      ) : (
+                        availableWorkers.map((member) => {
+                          const id = String(member.membershipId);
+
+                          return (
+                            <label
+                              key={member.membershipId}
+                              className="flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-[#f5f6f3]"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedWorkers.includes(id)}
+                                onChange={(event) => {
+                                  setSelectedWorkers((previous) =>
+                                    event.target.checked
+                                      ? [...previous, id]
+                                      : previous.filter(
+                                          (value) => value !== id,
+                                        ),
+                                  );
+                                }}
+                                disabled={saving}
+                                className="h-4 w-4 accent-[#a9b82b]"
+                              />
+
+                              <Avatar
+                                name={member.name}
+                                picture={
+                                  member.profilePicture || member.profileImage
+                                }
+                              />
+
+                              <span className="text-sm font-medium">
+                                {member.name}
+                              </span>
+                            </label>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    {availableWorkers.length > 0 && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-[#7a7359]">
+                          {selectedWorkers.length} selected
+                        </span>
+
+                        <button
+                          type="button"
+                          disabled={saving}
+                          onClick={() => {
+                            if (
+                              selectedWorkers.length === availableWorkers.length
+                            ) {
+                              setSelectedWorkers([]);
+                            } else {
+                              setSelectedWorkers(
+                                availableWorkers.map((member) =>
+                                  String(member.membershipId),
+                                ),
+                              );
+                            }
+                          }}
+                          className="text-xs font-semibold text-[#7a7359] hover:text-[#35362c]"
                         >
-                          {member.name}
-                        </option>
-                      ))}
-                    </select>
+                          {selectedWorkers.length === availableWorkers.length
+                            ? "Clear selection"
+                            : "Select all"}
+                        </button>
+                      </div>
+                    )}
 
                     <button
-                      disabled={!workerId || saving}
-                      onClick={assignWorker}
+                      disabled={selectedWorkers.length === 0 || saving}
+                      onClick={assignWorkers}
                       className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#d4e14b] px-4 py-2.5 text-sm font-semibold disabled:opacity-50"
                     >
                       <UserPlus size={17} />
-                      {saving ? "Saving..." : "Assign Worker"}
+
+                      {saving
+                        ? "Assigning..."
+                        : `Assign ${selectedWorkers.length} Worker${
+                            selectedWorkers.length === 1 ? "" : "s"
+                          }`}
                     </button>
                   </div>
                 )}
@@ -476,6 +602,7 @@ const TaskDetails = () => {
           >
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">Edit Task</h2>
+
               <button
                 type="button"
                 disabled={saving}

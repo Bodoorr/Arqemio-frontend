@@ -12,8 +12,12 @@ import {
   ImagePlus,
   ExternalLink,
 } from "lucide-react";
+
 import Client from "../../services/api";
-import { GetExpenseAttachments } from "../../services/attachment";
+import {
+  GetExpenseAttachments,
+  GetProjectUpdateAttachments,
+} from "../../services/attachment";
 import {
   GetProjectById,
   UpdateProject,
@@ -44,6 +48,12 @@ const ProjectDetails = () => {
   const [expenseAttachments, setExpenseAttachments] = useState([]);
   const [receiptLoading, setReceiptLoading] = useState(false);
   const [receiptError, setReceiptError] = useState("");
+
+  const [selectedUpdate, setSelectedUpdate] = useState(null);
+  const [updateAttachments, setUpdateAttachments] = useState([]);
+  const [updateAttachmentsLoading, setUpdateAttachmentsLoading] =
+    useState(false);
+  const [updateAttachmentsError, setUpdateAttachmentsError] = useState("");
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -77,6 +87,7 @@ const ProjectDetails = () => {
       setAvailableMembers(Array.isArray(response.data) ? response.data : []);
       setAvailableError(false);
     } catch (error) {
+      setAvailableMembers([]);
       setAvailableError(true);
     }
   };
@@ -117,8 +128,11 @@ const ProjectDetails = () => {
           Number(membership.companyId) === Number(projectData.companyId),
       );
 
-      if (owner) await loadAvailableMembers();
-      else setAvailableMembers([]);
+      if (owner) {
+        await loadAvailableMembers();
+      } else {
+        setAvailableMembers([]);
+      }
     } else {
       setMemberships([]);
     }
@@ -148,7 +162,9 @@ const ProjectDetails = () => {
     }
 
     if (results[3].status === "fulfilled") {
-      setUpdates(results[3].value.data || []);
+      setUpdates(
+        Array.isArray(results[3].value.data) ? results[3].value.data : [],
+      );
       setUpdatesError(false);
     } else {
       setUpdates([]);
@@ -182,20 +198,24 @@ const ProjectDetails = () => {
     } catch (error) {
       setTeamError(true);
     }
+
     await loadAvailableMembers();
   };
 
   const handleAssignMember = async (event) => {
     event.preventDefault();
+
     if (!isOwner || !selectedMember || teamSaving) return;
 
     setTeamSaving(true);
 
     try {
       const type = selectedRole === "MANAGER" ? "managers" : "workers";
+
       await Client.post(
         `/company/projects/${projectId}/${type}/${selectedMember}`,
       );
+
       await refreshTeam();
       setSelectedMember("");
       setShowAddMember(false);
@@ -213,9 +233,11 @@ const ProjectDetails = () => {
 
     try {
       const type = memberToRemove.role === "MANAGER" ? "managers" : "workers";
+
       await Client.delete(
         `/company/projects/${projectId}/${type}/${memberToRemove.membershipId}`,
       );
+
       await refreshTeam();
       setMemberToRemove(null);
     } catch (error) {
@@ -243,20 +265,49 @@ const ProjectDetails = () => {
     }
   };
 
+  const openUpdateDetails = async (update) => {
+    setSelectedUpdate(update);
+    setUpdateAttachments([]);
+    setUpdateAttachmentsError("");
+    setUpdateAttachmentsLoading(true);
+
+    try {
+      const data = await GetProjectUpdateAttachments(update.id);
+      setUpdateAttachments(Array.isArray(data) ? data : []);
+    } catch (error) {
+      setUpdateAttachmentsError(
+        error.response?.data?.message || "Unable to load progress images.",
+      );
+    } finally {
+      setUpdateAttachmentsLoading(false);
+    }
+  };
+
+  const updateStatusColor = (status) => {
+    if (status === "APPROVED") return "bg-green-100 text-green-800";
+    if (status === "REJECTED") return "bg-red-100 text-red-700";
+    if (status === "PENDING") return "bg-[#d4e14b] text-[#35362c]";
+    return "bg-[#e2e4e6] text-[#35362c]";
+  };
+
   const selectableMembers = availableMembers.filter(
     (member) => member.role === selectedRole,
   );
 
   const managers = members.filter((member) => member.role === "MANAGER");
+
   const workers = members.filter((member) => member.role === "WORKER");
 
   const activeTasks = tasks.filter((task) => task.status !== "ARCHIVED");
+
   const completed = activeTasks.filter(
     (task) => task.status === "COMPLETED",
   ).length;
+
   const inProgress = activeTasks.filter(
     (task) => task.status === "IN_PROGRESS",
   ).length;
+
   const taskProgress = activeTasks.length
     ? Math.round((completed / activeTasks.length) * 100)
     : 0;
@@ -264,6 +315,11 @@ const ProjectDetails = () => {
   const activeExpenses = expenses.filter(
     (expense) => expense.status !== "ARCHIVED",
   );
+
+  const activeUpdates = updates.filter(
+    (update) => update.status !== "ARCHIVED",
+  );
+
   const totalExpenses = activeExpenses.reduce(
     (total, expense) => total + Number(expense.amount || 0),
     0,
@@ -271,23 +327,33 @@ const ProjectDetails = () => {
 
   const budget = Number(project?.budget || 0);
   const remaining = budget - totalExpenses;
+
   const budgetProgress = budget
     ? Math.round((totalExpenses / budget) * 100)
     : 0;
 
   const statusColor = (status) => {
-    if (status === "COMPLETED") return "bg-[#DC5C5C] text-white";
-    if (status === "IN_PROGRESS" || status === "NORMAL")
+    if (status === "COMPLETED") {
+      return "bg-[#DC5C5C] text-white";
+    }
+
+    if (status === "IN_PROGRESS" || status === "NORMAL") {
       return "bg-[#d4e14b] text-[#35362c]";
+    }
+
     return "bg-[#e2e4e6] text-[#35362c]";
   };
 
   const handleChange = (event) => {
-    setForm({ ...form, [event.target.name]: event.target.value });
+    setForm({
+      ...form,
+      [event.target.name]: event.target.value,
+    });
   };
 
   const handleUpdate = async (event) => {
     event.preventDefault();
+
     if (!isOwner) return;
 
     if (form.expectedEndDate < form.startDate) {
@@ -335,8 +401,18 @@ const ProjectDetails = () => {
   const editFields = [
     { name: "name", title: "Project Name", required: true },
     { name: "location", title: "Location", required: true },
-    { name: "budget", title: "Budget (BHD)", type: "number", required: true },
-    { name: "startDate", title: "Start Date", type: "date", required: true },
+    {
+      name: "budget",
+      title: "Budget (BHD)",
+      type: "number",
+      required: true,
+    },
+    {
+      name: "startDate",
+      title: "Start Date",
+      type: "date",
+      required: true,
+    },
     {
       name: "expectedEndDate",
       title: "Expected End Date",
@@ -355,6 +431,7 @@ const ProjectDetails = () => {
     return (
       <div className="p-8">
         <p>{error || "Project not found."}</p>
+
         <button
           onClick={() => navigate("/projects")}
           className="mt-4 text-sm underline"
@@ -368,6 +445,7 @@ const ProjectDetails = () => {
   return (
     <div className="min-h-screen bg-[#e2e4e6] px-5 py-8 text-[#35362c] md:px-12">
       <main className="mx-auto max-w-7xl space-y-5">
+        {/* Back */}
         <button
           onClick={() => navigate("/projects")}
           className="group flex items-center gap-2 text-sm font-medium hover:text-[#7a7359]"
@@ -383,7 +461,9 @@ const ProjectDetails = () => {
               <p className="mb-2 text-xs uppercase tracking-wider text-[#7a7359]">
                 Workspace / Project Details
               </p>
+
               <h1 className="text-3xl font-semibold">{project.name}</h1>
+
               <p className="mt-2 text-sm text-[#7a7359]">
                 {project.companyName} · {project.location}
               </p>
@@ -413,14 +493,16 @@ const ProjectDetails = () => {
                     }}
                     className="flex items-center gap-2 rounded-lg border border-[#c3c8c1] px-3 py-2 text-sm"
                   >
-                    <Pencil size={15} /> Edit
+                    <Pencil size={15} />
+                    Edit
                   </button>
 
                   <button
                     onClick={handleArchive}
                     className="flex items-center gap-2 rounded-lg bg-[#35362c] px-3 py-2 text-sm text-white"
                   >
-                    <Archive size={15} /> Archive
+                    <Archive size={15} />
+                    Archive
                   </button>
                 </>
               )}
@@ -436,6 +518,7 @@ const ProjectDetails = () => {
             ].map(([title, value]) => (
               <div key={title}>
                 <p className="text-xs text-[#7a7359]">{title}</p>
+
                 <p className="mt-2 text-xl font-semibold">{value}</p>
               </div>
             ))}
@@ -451,6 +534,7 @@ const ProjectDetails = () => {
               {editFields.map((field) => (
                 <label key={field.name} className="block text-sm font-medium">
                   {field.title}
+
                   <input
                     name={field.name}
                     type={field.type || "text"}
@@ -517,6 +601,7 @@ const ProjectDetails = () => {
               >
                 Cancel
               </button>
+
               <button
                 type="submit"
                 disabled={saving}
@@ -537,16 +622,21 @@ const ProjectDetails = () => {
               <div>
                 <div className="mb-2 flex justify-between">
                   <p className="text-sm text-[#7a7359]">Task Progress</p>
+
                   <p className="font-semibold">
                     {tasksError ? "N/A" : `${taskProgress}%`}
                   </p>
                 </div>
+
                 <div className="h-2 rounded-full bg-[#e2e4e6]">
                   <div
                     className="h-2 rounded-full bg-[#d4e14b]"
-                    style={{ width: tasksError ? "0%" : `${taskProgress}%` }}
+                    style={{
+                      width: tasksError ? "0%" : `${taskProgress}%`,
+                    }}
                   />
                 </div>
+
                 <p className="mt-2 text-xs text-[#7a7359]">
                   {tasksError
                     ? "Unable to load tasks"
@@ -557,10 +647,12 @@ const ProjectDetails = () => {
               <div>
                 <div className="mb-2 flex justify-between">
                   <p className="text-sm text-[#7a7359]">Budget Usage</p>
+
                   <p className="font-semibold">
                     {expensesError || !budget ? "N/A" : `${budgetProgress}%`}
                   </p>
                 </div>
+
                 <div className="h-2 rounded-full bg-[#e2e4e6]">
                   <div
                     className="h-2 rounded-full bg-[#d4e14b]"
@@ -571,11 +663,13 @@ const ProjectDetails = () => {
                     }}
                   />
                 </div>
+
                 <p className="mt-2 text-xs text-[#7a7359]">
                   {expensesError
                     ? "Unable to load expenses"
                     : `${money(totalExpenses)} of ${money(budget)}`}
                 </p>
+
                 {!expensesError && remaining < 0 && (
                   <p className="mt-1 text-xs text-[#DC5C5C]">Budget exceeded</p>
                 )}
@@ -586,6 +680,7 @@ const ProjectDetails = () => {
             <div className="mt-6 border-t border-[#c3c8c1] pt-4">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <h3 className="text-sm font-semibold">Recent Tasks</h3>
+
                 <button
                   type="button"
                   onClick={() => navigate(`/tasks?projectId=${projectId}`)}
@@ -619,16 +714,19 @@ const ProjectDetails = () => {
                           <p className="truncate text-sm font-medium">
                             {task.title}
                           </p>
+
                           <p className="mt-1 text-xs text-[#7a7359]">
                             {label(task.priority)} Priority
                           </p>
                         </div>
+
                         <div className="flex shrink-0 items-center gap-3">
                           <span
                             className={`rounded-full px-3 py-1 text-xs ${statusColor(task.status)}`}
                           >
                             {label(task.status)}
                           </span>
+
                           <span className="text-lg text-[#7a7359]">›</span>
                         </div>
                       </button>
@@ -643,6 +741,7 @@ const ProjectDetails = () => {
             <div className="mb-5 flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold">Project Team</h2>
+
                 <p className="mt-1 text-xs text-[#7a7359]">
                   {teamError
                     ? "Team unavailable"
@@ -659,6 +758,7 @@ const ProjectDetails = () => {
                   className="flex items-center gap-2 rounded-lg bg-[#d4e14b] px-3 py-2 text-xs font-semibold"
                 >
                   {showAddMember ? <X size={15} /> : <UserPlus size={15} />}
+
                   {showAddMember ? "Close" : "Add Member"}
                 </button>
               ) : (
@@ -697,6 +797,7 @@ const ProjectDetails = () => {
                     disabled={availableError || selectableMembers.length === 0}
                   >
                     <option value="">Select a member</option>
+
                     {selectableMembers.map((member) => (
                       <option
                         key={member.membershipId}
@@ -754,6 +855,7 @@ const ProjectDetails = () => {
                       <p className="text-xs font-semibold tracking-wide text-[#7a7359]">
                         {group.title}
                       </p>
+
                       <span className="rounded-full bg-[#e2e4e6] px-2.5 py-1 text-xs">
                         {group.people.length}
                       </span>
@@ -777,10 +879,12 @@ const ProjectDetails = () => {
                             >
                               {(member.name || "U").charAt(0).toUpperCase()}
                             </div>
+
                             <div className="min-w-0 flex-1">
                               <p className="truncate text-sm font-semibold">
                                 {member.name}
                               </p>
+
                               <p className="text-xs text-[#7a7359]">
                                 {member.role === "MANAGER"
                                   ? "Project Manager"
@@ -813,6 +917,7 @@ const ProjectDetails = () => {
           <div className={card}>
             <div className="mb-4 flex items-center justify-between gap-2">
               <h2 className="text-lg font-semibold">Recent Expenses</h2>
+
               <button
                 type="button"
                 onClick={() => navigate(`/expenses?projectId=${projectId}`)}
@@ -847,14 +952,17 @@ const ProjectDetails = () => {
                         <p className="truncate text-sm font-medium">
                           {expense.title}
                         </p>
+
                         <p className="mt-1 text-xs text-[#7a7359]">
                           {label(expense.category)}
                         </p>
                       </div>
+
                       <div className="flex shrink-0 items-center gap-2">
                         <p className="text-sm font-semibold">
                           {money(expense.amount)}
                         </p>
+
                         <span className="text-lg text-[#7a7359] transition group-hover:translate-x-1">
                           ›
                         </span>
@@ -867,22 +975,53 @@ const ProjectDetails = () => {
 
           {/* Project Updates */}
           <div className={card}>
-            <h2 className="mb-4 text-lg font-semibold">Project Updates</h2>
+            <div className="mb-4 flex items-center justify-between gap-2">
+              <h2 className="text-lg font-semibold">Project Updates</h2>
+
+              <button
+                type="button"
+                onClick={() => navigate(`/updates?projectId=${projectId}`)}
+                className="rounded-lg px-2 py-2 text-xs font-semibold text-[#7a7359] hover:bg-[#f3f5e9]"
+              >
+                View All Updates ({updatesError ? "N/A" : activeUpdates.length})
+              </button>
+            </div>
+
             {updatesError ? (
               <p className="text-sm text-[#7a7359]">Unable to load updates.</p>
-            ) : updates.length === 0 ? (
+            ) : activeUpdates.length === 0 ? (
               <p className="text-sm text-[#7a7359]">No updates yet.</p>
             ) : (
-              <div className="divide-y divide-[#e2e4e6]">
-                {updates.slice(0, 3).map((update) => (
-                  <div key={update.id} className="py-3">
-                    <p className="text-sm font-medium">
-                      {update.title || `Update #${update.id}`}
-                    </p>
-                    <p className="mt-1 line-clamp-2 text-xs text-[#7a7359]">
-                      {update.description || "No description"}
-                    </p>
-                  </div>
+              <div className="space-y-2">
+                {activeUpdates.slice(0, 3).map((update) => (
+                  <button
+                    key={update.id}
+                    type="button"
+                    onClick={() => openUpdateDetails(update)}
+                    className="group flex w-full items-center justify-between gap-3 rounded-xl border border-[#e2e4e6] px-3 py-3 text-left transition hover:border-[#b4c25b] hover:bg-[#f8f9ef]"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">
+                        {update.title || `Update #${update.id}`}
+                      </p>
+
+                      <p className="mt-1 truncate text-xs text-[#7a7359]">
+                        By {update.updatedByName || "Unknown"}
+                      </p>
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-medium ${updateStatusColor(update.status)}`}
+                      >
+                        {label(update.status)}
+                      </span>
+
+                      <span className="text-lg text-[#7a7359] transition group-hover:translate-x-1">
+                        ›
+                      </span>
+                    </div>
+                  </button>
                 ))}
               </div>
             )}
@@ -891,6 +1030,7 @@ const ProjectDetails = () => {
           {/* Project Information */}
           <div className={card}>
             <h2 className="mb-4 text-lg font-semibold">Project Information</h2>
+
             <div className="space-y-4 text-sm">
               {[
                 ["Start Date", project.startDate || "-"],
@@ -900,18 +1040,174 @@ const ProjectDetails = () => {
               ].map(([title, value]) => (
                 <div key={title} className="flex justify-between gap-3">
                   <span className="text-[#7a7359]">{title}</span>
+
                   <span className="text-right">{value}</span>
                 </div>
               ))}
             </div>
+
             <div className="mt-5 border-t border-[#c3c8c1] pt-4">
               <p className="text-xs text-[#7a7359]">Description</p>
+
               <p className="mt-2 line-clamp-3 text-sm">
                 {project.description || "No description provided."}
               </p>
             </div>
           </div>
         </div>
+
+        {/* Project Update Details Modal */}
+        {selectedUpdate && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#35362c]/50 p-4">
+            <div
+              role="dialog"
+              aria-modal="true"
+              className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-2xl bg-[#f5f6f3] p-5 shadow-2xl md:p-6"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-[#7a7359]">
+                    Project Update · #{selectedUpdate.id}
+                  </p>
+
+                  <h2 className="mt-1 text-xl font-semibold">
+                    {selectedUpdate.title}
+                  </h2>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedUpdate(null)}
+                  className="rounded-lg p-2 hover:bg-[#e2e4e6]"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white p-4">
+                <div>
+                  <p className="text-xs text-[#7a7359]">Project</p>
+
+                  <p className="mt-1 font-semibold">
+                    {selectedUpdate.projectName || project.name}
+                  </p>
+                </div>
+
+                <span
+                  className={`rounded-full px-3 py-1.5 text-xs font-semibold ${updateStatusColor(selectedUpdate.status)}`}
+                >
+                  {label(selectedUpdate.status)}
+                </span>
+              </div>
+
+              <div className="mt-4 grid gap-4 rounded-xl bg-white p-4 text-sm sm:grid-cols-2">
+                <div>
+                  <p className="text-xs text-[#7a7359]">Submitted By</p>
+
+                  <p className="mt-1 font-medium">
+                    {selectedUpdate.updatedByName || "—"}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs text-[#7a7359]">Reviewed By</p>
+
+                  <p className="mt-1 font-medium">
+                    {selectedUpdate.reviewedByName || "Not reviewed"}
+                  </p>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <p className="font-semibold">Description</p>
+
+                  <p className="mt-2 whitespace-pre-wrap text-[#7a7359]">
+                    {selectedUpdate.description || "No description provided."}
+                  </p>
+                </div>
+
+                {selectedUpdate.reviewNote && (
+                  <div className="border-t border-[#e2e4e6] pt-3 sm:col-span-2">
+                    <p className="font-semibold">Review Note</p>
+
+                    <p className="mt-2 whitespace-pre-wrap text-[#7a7359]">
+                      {selectedUpdate.reviewNote}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Construction Images */}
+              <div className="mt-4 rounded-xl bg-white p-4">
+                <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+                  <ImagePlus size={17} />
+                  Construction Progress Images
+                </h3>
+
+                {updateAttachmentsLoading ? (
+                  <p className="text-sm text-[#7a7359]">Loading images...</p>
+                ) : updateAttachmentsError ? (
+                  <p className="text-sm text-red-700">
+                    {updateAttachmentsError}
+                  </p>
+                ) : updateAttachments.length === 0 ? (
+                  <p className="rounded-lg border border-dashed p-4 text-center text-sm text-[#7a7359]">
+                    No images uploaded.
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap justify-center gap-3">
+                    {updateAttachments.map((attachment) => (
+                      <a
+                        key={attachment.id}
+                        href={attachment.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full max-w-[220px] overflow-hidden rounded-lg border border-[#c3c8c1] hover:shadow-md"
+                      >
+                        <div className="flex h-36 items-center justify-center bg-[#f5f6f3] p-2">
+                          <img
+                            src={attachment.fileUrl}
+                            alt={attachment.fileName || "Progress image"}
+                            className="max-h-full max-w-full object-contain"
+                          />
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2 border-t px-3 py-2">
+                          <span className="truncate text-xs">
+                            {attachment.fileName || "Image"}
+                          </span>
+
+                          <ExternalLink size={13} />
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-4 flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedUpdate(null)}
+                  className="rounded-lg border border-[#c3c8c1] bg-white px-5 py-2.5 text-sm font-medium"
+                >
+                  Close
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigate(
+                      `/updates?projectId=${projectId}&updateId=${selectedUpdate.id}`,
+                    )
+                  }
+                  className="rounded-lg bg-[#d4e14b] px-5 py-2.5 text-sm font-medium"
+                >
+                  Open in Project Updates
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Expense Details Modal */}
         {selectedExpense && (
@@ -926,10 +1222,12 @@ const ProjectDetails = () => {
                   <p className="text-xs uppercase tracking-wider text-[#7a7359]">
                     Expense Details · #{selectedExpense.id}
                   </p>
+
                   <h2 className="mt-1 text-xl font-semibold">
                     {selectedExpense.title}
                   </h2>
                 </div>
+
                 <button
                   onClick={() => setSelectedExpense(null)}
                   className="rounded-lg p-2 hover:bg-[#e2e4e6]"
@@ -940,6 +1238,7 @@ const ProjectDetails = () => {
 
               <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[#d4e14b] px-5 py-3">
                 <span className="text-sm font-medium">Expense Amount</span>
+
                 <span className="text-2xl font-semibold">
                   {money(selectedExpense.amount)}
                 </span>
@@ -962,6 +1261,7 @@ const ProjectDetails = () => {
                 ].map(([title, value]) => (
                   <div key={title}>
                     <p className="text-xs text-[#7a7359]">{title}</p>
+
                     <p className="mt-1 break-words font-medium">
                       {value || "—"}
                     </p>
@@ -970,6 +1270,7 @@ const ProjectDetails = () => {
 
                 <div className="col-span-2 border-t border-[#e2e4e6] pt-3 md:col-span-3">
                   <p className="font-semibold">Description</p>
+
                   <p className="mt-1 whitespace-pre-wrap text-[#7a7359]">
                     {selectedExpense.description || "No description provided."}
                   </p>
@@ -978,7 +1279,8 @@ const ProjectDetails = () => {
 
               <div className="mt-4 rounded-xl bg-white p-4">
                 <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
-                  <ImagePlus size={17} /> Receipts & Attachments
+                  <ImagePlus size={17} />
+                  Receipts & Attachments
                 </h3>
 
                 {receiptLoading ? (
@@ -1006,10 +1308,12 @@ const ProjectDetails = () => {
                             className="max-h-full max-w-full object-contain"
                           />
                         </div>
+
                         <div className="flex items-center justify-between gap-2 border-t px-3 py-2">
                           <span className="truncate text-xs">
                             {attachment.fileName}
                           </span>
+
                           <ExternalLink size={13} />
                         </div>
                       </a>
@@ -1043,6 +1347,7 @@ const ProjectDetails = () => {
               </div>
 
               <h2 className="text-xl font-semibold">Remove team member?</h2>
+
               <p className="mt-2 text-sm leading-6 text-[#7a7359]">
                 Are you sure you want to remove{" "}
                 <span className="font-semibold text-[#35362c]">
@@ -1060,6 +1365,7 @@ const ProjectDetails = () => {
                 >
                   Cancel
                 </button>
+
                 <button
                   onClick={handleRemoveMember}
                   disabled={teamSaving}

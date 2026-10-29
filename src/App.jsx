@@ -20,6 +20,7 @@ import Reservations from "./pages/equipments/reservation/Reservations";
 import Expenses from "./pages/expense/Expense";
 import ProjectUpdates from "./pages/projects/updates/ProjectUpdates";
 import ProjectPreview from "./pages/customer/ProjectPreview";
+import CustomerRegister from "./pages/customer/CustomerRegister";
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(null);
@@ -70,6 +71,7 @@ const App = () => {
       <Route path="/expenses" element={<Expenses />} />
       <Route path="/updates" element={<ProjectUpdates />} />
       <Route path="/project-preview/:token" element={<ProjectPreview />} />
+      <Route path="/customer/register/:token" element={<CustomerRegister />} />
     </Routes>
   );
 };

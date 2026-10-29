@@ -25,6 +25,7 @@ import CustomerDashboard from "./pages/dahsboards/CustomerDashboard";
 import DashboardLayout from "./components/DashboardLayout";
 import AuditLogs from "./pages/audit/AuditLogs";
 import Profile from "./pages/profile/Profile";
+import { Toaster } from "sonner";
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(null);
@@ -50,45 +51,68 @@ const App = () => {
   };
 
   return (
-    <Routes>
-      <Route
-        path="/login"
-        element={<Login setIsAuthenticated={setIsAuthenticated} />}
+    <>
+      <Toaster
+        position="top-right"
+        duration={5000}
+        closeButton
+        theme="light"
+        toastOptions={{
+          style: {
+            background: "#ffffff",
+            color: "#35362c",
+            border: "1px solid #e2e4e6",
+            borderRadius: "14px",
+            padding: "16px",
+          },
+        }}
       />
-      <Route path="/forgot-password" element={<ForgetPassword />} />
-      <Route path="/reset-password/:token" element={<ResetPassword />} />
-      <Route
-        path="/invitation/register/:token"
-        element={<InvitationRegister />}
-      />
-      <Route path="/invitation/:token" element={<InvitationAccept />} />
-      <Route path="/admin/companies" element={<Companies />} />
-      <Route path="/admin/companies/:companyId" element={<CompanyDetails />} />
-      <Route path="/projects" element={<Projects />} />
-      <Route path="/projects/:projectId" element={<ProjectDetails />} />
-      <Route path="/tasks" element={<Tasks />} />
-      <Route path="/tasks/:taskId" element={<TaskDetails />} />
-      <Route path="/equipment" element={<Equipment />} />
-      <Route path="/equipment/:equipmentId" element={<EquipmentDetails />} />
-      <Route path="/reservations" element={<Reservations />} />
-      <Route path="/expenses" element={<Expenses />} />
-      <Route path="/updates" element={<ProjectUpdates />} />
-      <Route path="/project-preview/:token" element={<ProjectPreview />} />
-      <Route path="/customer/register/:token" element={<CustomerRegister />} />
-      <Route path="/customer/dashboard" element={<CustomerDashboard />} />
-      <Route element={<DashboardLayout />}>
-        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+      <Routes>
         <Route
-          path="/admin/audit-logs"
-          element={<AuditLogs role="PLATFORM_ADMIN" />}
+          path="/login"
+          element={<Login setIsAuthenticated={setIsAuthenticated} />}
         />
-        <Route path="/admin/profile" element={<Profile />} />
-        <Route path="/owner/profile" element={<Profile />} />
-        <Route path="/manager/profile" element={<Profile />} />
-        <Route path="/worker/profile" element={<Profile />} />
-        <Route path="/customer/profile" element={<Profile />} />
-      </Route>
-    </Routes>
+        <Route path="/forgot-password" element={<ForgetPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
+        <Route
+          path="/invitation/register/:token"
+          element={<InvitationRegister />}
+        />
+        <Route path="/invitation/:token" element={<InvitationAccept />} />
+        <Route path="/admin/companies" element={<Companies />} />
+        <Route
+          path="/admin/companies/:companyId"
+          element={<CompanyDetails />}
+        />
+        <Route path="/projects" element={<Projects />} />
+        <Route path="/projects/:projectId" element={<ProjectDetails />} />
+        <Route path="/tasks" element={<Tasks />} />
+        <Route path="/tasks/:taskId" element={<TaskDetails />} />
+        <Route path="/equipment" element={<Equipment />} />
+        <Route path="/equipment/:equipmentId" element={<EquipmentDetails />} />
+        <Route path="/reservations" element={<Reservations />} />
+        <Route path="/expenses" element={<Expenses />} />
+        <Route path="/updates" element={<ProjectUpdates />} />
+        <Route path="/project-preview/:token" element={<ProjectPreview />} />
+        <Route
+          path="/customer/register/:token"
+          element={<CustomerRegister />}
+        />
+        <Route path="/customer/dashboard" element={<CustomerDashboard />} />
+        <Route element={<DashboardLayout />}>
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route
+            path="/admin/audit-logs"
+            element={<AuditLogs role="PLATFORM_ADMIN" />}
+          />
+          <Route path="/admin/profile" element={<Profile />} />
+          <Route path="/owner/profile" element={<Profile />} />
+          <Route path="/manager/profile" element={<Profile />} />
+          <Route path="/worker/profile" element={<Profile />} />
+          <Route path="/customer/profile" element={<Profile />} />
+        </Route>
+      </Routes>
+    </>
   );
 };
 

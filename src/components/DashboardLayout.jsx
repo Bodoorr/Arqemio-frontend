@@ -27,6 +27,8 @@ const DashboardLayout = () => {
 
   return (
     <div className="flex min-h-screen flex-col bg-[#f5f6f3] text-[#35362c] lg:h-screen lg:overflow-hidden">
+      <NotificationListener />
+
       <Navbar
         isAuthenticated={true}
         user={user}

@@ -14,7 +14,7 @@ export const navigationByRole = {
   PLATFORM_ADMIN: [
     { label: "Dashboard", path: "/admin/dashboard", icon: LayoutDashboard },
     { label: "Companies", path: "/admin/companies", icon: Building2 },
-    { label: "Audit Logs", path: "/audit-logs", icon: ScrollText },
+    { label: "Audit Logs", path: "admin/audit-logs", icon: ScrollText },
     { label: "Profile", path: "/profile", icon: UserRound },
   ],
   OWNER: [

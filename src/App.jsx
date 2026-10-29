@@ -23,6 +23,7 @@ import ProjectPreview from "./pages/customer/ProjectPreview";
 import CustomerRegister from "./pages/customer/CustomerRegister";
 import CustomerDashboard from "./pages/dahsboards/CustomerDashboard";
 import DashboardLayout from "./components/DashboardLayout";
+import AuditLogs from "./pages/audit/AuditLogs";
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(null);
@@ -76,6 +77,10 @@ const App = () => {
       <Route path="/customer/dashboard" element={<CustomerDashboard />} />
       <Route element={<DashboardLayout />}>
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route
+          path="/admin/audit-logs"
+          element={<AuditLogs role="PLATFORM_ADMIN" />}
+        />
       </Route>
     </Routes>
   );

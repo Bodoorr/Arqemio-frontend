@@ -35,10 +35,11 @@ export const navigationByRole = () => ({
   MANAGER: [
     { label: "Dashboard", path: "/manager/dashboard", icon: LayoutDashboard },
     { label: "Projects", path: "/projects", icon: FolderKanban },
-    { label: "Project Updates", path: "/project-updates", icon: ClipboardList },
-    { label: "Expenses", path: "/expenses", icon: Wallet },
+    { label: "Tasks", path: "/tasks", icon: ClipboardList },
     { label: "Equipment", path: "/equipment", icon: HardHat },
+    { label: "Reservations", path: "/reservations", icon: CalendarDays },
     { label: "Profile", path: "/manager/profile", icon: UserRound },
+    { label: "Project Updates", path: "/updates", icon: Activity },
   ],
 
   WORKER: [
@@ -62,6 +63,7 @@ export const navigationByRole = () => ({
       path: "/worker/profile",
       icon: UserRound,
     },
+    { label: "Project Updates", path: "/updates", icon: Activity },
   ],
 
   CUSTOMER: [

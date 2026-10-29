@@ -29,6 +29,7 @@ import { Toaster } from "sonner";
 import OwnerDashboard from "./pages/dahsboards/OwnerDashboard";
 import Client from "./services/api";
 import WorkerDashboard from "./pages/dahsboards/WorkerDashboard";
+import ManagerDashboard from "./pages/dahsboards/ManagerDashboard";
 
 const App = () => {
   const navigate = useNavigate();
@@ -238,6 +239,15 @@ const App = () => {
           />
 
           <Route
+            path="/worker/dashboard"
+            element={protect(<WorkerDashboard />, ["WORKER"])}
+          />
+
+          <Route
+            path="/manager/dashboard"
+            element={protect(<ManagerDashboard />, ["MANAGER"])}
+          />
+          <Route
             path="/projects"
             element={protect(<Projects />, companyRoles)}
           />
@@ -310,10 +320,6 @@ const App = () => {
           />
         </Route>
 
-        <Route
-          path="/worker/dashboard"
-          element={protect(<WorkerDashboard />, ["WORKER"])}
-        />
         <Route
           path="/unauthorized"
           element={

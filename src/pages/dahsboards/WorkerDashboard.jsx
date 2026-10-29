@@ -7,6 +7,7 @@ import {
   Clock3,
   ArrowRight,
   HardHat,
+  Activity,
 } from "lucide-react";
 import Client from "../../services/api";
 
@@ -24,11 +25,13 @@ const WorkerDashboard = () => {
         ]);
 
         if (results[0].status === "fulfilled") {
-          setProjects(results[0].value.data || []);
+          const data = results[0].value.data;
+          setProjects(Array.isArray(data) ? data : data?.content || []);
         }
 
         if (results[1].status === "fulfilled") {
-          setTasks(results[1].value.data || []);
+          const data = results[1].value.data;
+          setTasks(Array.isArray(data) ? data : data?.content || []);
         }
       } catch (error) {
         console.error("Unable to load worker dashboard:", error);
@@ -71,6 +74,7 @@ const WorkerDashboard = () => {
 
   return (
     <div className="mx-auto max-w-7xl space-y-7 py-5 text-[#35362c]">
+      {/* Header */}
       <div>
         <p className="text-sm font-medium text-[#7a7359]">Arqemio Workspace</p>
 
@@ -81,6 +85,7 @@ const WorkerDashboard = () => {
         </p>
       </div>
 
+      {/* Statistics */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map(({ title, value, icon: Icon }) => (
           <div
@@ -98,11 +103,14 @@ const WorkerDashboard = () => {
         ))}
       </div>
 
+      {/* Tasks and Overview */}
       <div className="grid gap-5 lg:grid-cols-3">
+        {/* My Tasks */}
         <section className="rounded-2xl border border-[#e2e4e6] bg-white p-6 lg:col-span-2">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold">My Tasks</h2>
+
               <p className="mt-1 text-sm text-[#7a7359]">
                 Your recent task activities
               </p>
@@ -140,7 +148,7 @@ const WorkerDashboard = () => {
                   </div>
 
                   <span className="shrink-0 rounded-lg bg-[#f5f6f3] px-3 py-1.5 text-xs font-medium">
-                    {task.status?.replaceAll("_", " ")}
+                    {task.status?.replaceAll("_", " ") || "Pending"}
                   </span>
                 </Link>
               ))
@@ -148,6 +156,7 @@ const WorkerDashboard = () => {
           </div>
         </section>
 
+        {/* Task Overview */}
         <section className="rounded-2xl border border-[#e2e4e6] bg-white p-6">
           <h2 className="text-lg font-semibold">Task Overview</h2>
 
@@ -190,6 +199,7 @@ const WorkerDashboard = () => {
         </section>
       </div>
 
+      {/* My Projects */}
       <section className="rounded-2xl border border-[#e2e4e6] bg-white p-6">
         <div className="flex items-center justify-between">
           <div>
@@ -239,6 +249,34 @@ const WorkerDashboard = () => {
               </Link>
             ))
           )}
+        </div>
+      </section>
+
+      {/* Project Updates */}
+      <section className="rounded-2xl border border-[#e2e4e6] bg-white p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-[#e9edcf] p-3">
+              <Activity size={22} />
+            </div>
+
+            <div>
+              <h2 className="text-lg font-semibold">Project Updates</h2>
+
+              <p className="mt-1 text-sm text-[#7a7359]">
+                Stay informed about the latest progress and activities in your
+                projects.
+              </p>
+            </div>
+          </div>
+
+          <Link
+            to="/updates"
+            className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#d4e14b] px-5 py-3 text-sm font-semibold transition hover:bg-[#c5d43b]"
+          >
+            View Updates
+            <ArrowRight size={17} />
+          </Link>
         </div>
       </section>
     </div>

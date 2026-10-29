@@ -17,6 +17,7 @@ import TaskDetails from "./pages/tasks/TaskDetails";
 import Equipment from "./pages/equipments/Equipment";
 import EquipmentDetails from "./pages/equipments/EquipmentDetails";
 import Reservations from "./pages/equipments/reservation/Reservations";
+import Expenses from "./pages/expense/Expense";
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(null);
@@ -64,6 +65,7 @@ const App = () => {
       <Route path="/equipment" element={<Equipment />} />
       <Route path="/equipment/:equipmentId" element={<EquipmentDetails />} />
       <Route path="/reservations" element={<Reservations />} />
+      <Route path="/expenses" element={<Expenses />} />
     </Routes>
   );
 };

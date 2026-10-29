@@ -81,7 +81,7 @@ const InvitationRegister = () => {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#e2e4e6]">
+      <div className="flex min-h-screen items-center justify-center bg-transparent">
         <p className="text-sm text-[#7a7359]">Validating invitation...</p>
       </div>
     );

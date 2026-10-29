@@ -344,7 +344,7 @@ const ProjectUpdates = () => {
   );
 
   return (
-    <div className="min-h-screen bg-[#e2e4e6] px-5 py-8 text-[#35362c] md:px-12">
+    <div className="min-h-screen bg-transparent px-5 py-8 text-[#35362c] md:px-12">
       <main className="mx-auto max-w-7xl space-y-5">
         <button
           onClick={() => navigate("/projects")}

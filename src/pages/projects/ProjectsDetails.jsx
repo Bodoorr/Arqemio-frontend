@@ -423,7 +423,7 @@ const ProjectDetails = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#e2e4e6] p-8">Loading project...</div>
+      <div className="min-h-screen bg-transparent p-8">Loading project...</div>
     );
   }
 
@@ -443,9 +443,8 @@ const ProjectDetails = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#e2e4e6] px-5 py-8 text-[#35362c] md:px-12">
+    <div className="min-h-screen bg-transparent px-5 py-8 text-[#35362c] md:px-12">
       <main className="mx-auto max-w-7xl space-y-5">
-        {/* Back */}
         <button
           onClick={() => navigate("/projects")}
           className="group flex items-center gap-2 text-sm font-medium hover:text-[#7a7359]"

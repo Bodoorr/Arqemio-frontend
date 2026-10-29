@@ -26,6 +26,7 @@ import DashboardLayout from "./components/DashboardLayout";
 import AuditLogs from "./pages/audit/AuditLogs";
 import Profile from "./pages/profile/Profile";
 import { Toaster } from "sonner";
+import OwnerDashboard from "./pages/dahsboards/OwnerDashboard";
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(null);
@@ -110,6 +111,7 @@ const App = () => {
           <Route path="/manager/profile" element={<Profile />} />
           <Route path="/worker/profile" element={<Profile />} />
           <Route path="/customer/profile" element={<Profile />} />
+          <Route path="/owner/dashboard" element={<OwnerDashboard />} />
         </Route>
       </Routes>
     </>

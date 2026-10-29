@@ -261,7 +261,7 @@ const TaskDetails = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#e2e4e6] p-5 text-[#35362c] md:p-8">
+    <div className="min-h-screen bg-transparent p-5 text-[#35362c] md:p-8">
       <div className="mx-auto max-w-5xl">
         <button
           onClick={() => navigate("/tasks")}

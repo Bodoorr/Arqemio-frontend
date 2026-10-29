@@ -74,7 +74,7 @@ const InvitationAccept = () => {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#e2e4e6] px-4">
+    <div className="flex min-h-screen items-center justify-center bg-transparent px-4">
       <div className="w-full max-w-md rounded-lg border border-[#c3c8c1] bg-white p-8">
         <h1 className="text-2xl font-semibold text-[#35362c]">
           {success ? "Invitation Accepted" : "Join Arqemio"}
@@ -118,7 +118,7 @@ const InvitationAccept = () => {
             <div className="mt-4">
               <ErrorMessage message={error} />
             </div>
-            
+
             {invitation && (
               <>
                 {isLoggedIn ? (

@@ -96,7 +96,7 @@ export default function CustomerRegister() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f6f3] px-5 py-6 text-[#35362c] sm:px-8">
+    <div className="min-h-screen bg-transparent px-5 py-6 text-[#35362c] sm:px-8">
       <div className="mx-auto max-w-6xl">
         {/* Header */}
         <header className="mb-10 flex items-center justify-between">

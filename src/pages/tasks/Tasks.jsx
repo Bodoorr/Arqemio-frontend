@@ -258,7 +258,7 @@ const Tasks = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#e2e4e6] px-5 py-8 text-[#35362c] md:px-10">
+    <div className="min-h-screen bg-transparent px-5 py-8 text-[#35362c] md:px-10">
       <main className="mx-auto max-w-7xl space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>

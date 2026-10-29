@@ -322,7 +322,7 @@ export default function Expenses() {
   };
 
   return (
-    <div className="min-h-screen bg-[#e2e4e6] px-5 py-6 text-[#35362c] md:px-10">
+    <div className="min-h-screen bg-transparent px-5 py-6 text-[#35362c] md:px-10">
       <div className="mx-auto max-w-7xl">
         {/* Header */}
         <div className="mb-7 flex flex-wrap items-center justify-between gap-4">

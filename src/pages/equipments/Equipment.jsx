@@ -392,7 +392,7 @@ const Equipment = () => {
   const labelClass = "mb-2 block text-sm font-medium text-[#35362c]";
 
   return (
-    <div className="min-h-screen bg-[#e2e4e6] px-5 py-6 text-[#35362c] md:px-10">
+    <div className="min-h-screen bg-transparent px-5 py-6 text-[#35362c] md:px-10">
       <div className="mx-auto max-w-7xl">
         <div className="mb-7 flex flex-wrap items-center justify-between gap-4">
           <div>

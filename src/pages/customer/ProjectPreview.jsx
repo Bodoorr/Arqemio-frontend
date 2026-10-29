@@ -79,9 +79,8 @@ export default function ProjectPreview() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f6f3] text-[#35362c] lg:h-screen lg:overflow-hidden">
+    <div className="min-h-screen bg-transparent text-[#35362c] lg:h-screen lg:overflow-hidden">
       <div className="mx-auto flex min-h-screen max-w-[1500px] flex-col px-5 py-5 sm:px-8 lg:h-full lg:min-h-0 lg:px-10 lg:py-6">
-        {/* Header - no white background */}
         <header className="mb-6 flex shrink-0 items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#d4e14b]">

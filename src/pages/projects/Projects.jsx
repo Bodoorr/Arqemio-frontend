@@ -180,7 +180,7 @@ const Projects = () => {
   };
 
   const inputClass =
-    "w-full rounded-lg border border-[#c3c8c1] bg-white px-4 py-3 text-sm outline-none focus:border-[#7a7359]";
+    "w-full rounded-lg border border-[#c3c8c1] bg-transparent px-4 py-3 text-sm outline-none focus:border-[#7a7359]";
 
   return (
     <div className="min-h-screen bg-[#e2e4e6] px-5 py-8 text-[#35362c] md:px-12">

@@ -9,8 +9,11 @@ import {
   UserPlus,
   X,
   Trash2,
+  ImagePlus,
+  ExternalLink,
 } from "lucide-react";
 import Client from "../../services/api";
+import { GetExpenseAttachments } from "../../services/attachment";
 import {
   GetProjectById,
   UpdateProject,
@@ -24,8 +27,8 @@ const ProjectDetails = () => {
   const [project, setProject] = useState(null);
   const [memberships, setMemberships] = useState([]);
   const [members, setMembers] = useState([]);
-  const [teamError, setTeamError] = useState(false);
   const [availableMembers, setAvailableMembers] = useState([]);
+  const [teamError, setTeamError] = useState(false);
   const [availableError, setAvailableError] = useState(false);
   const [showAddMember, setShowAddMember] = useState(false);
   const [selectedRole, setSelectedRole] = useState("MANAGER");
@@ -36,6 +39,11 @@ const ProjectDetails = () => {
   const [tasks, setTasks] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [updates, setUpdates] = useState([]);
+
+  const [selectedExpense, setSelectedExpense] = useState(null);
+  const [expenseAttachments, setExpenseAttachments] = useState([]);
+  const [receiptLoading, setReceiptLoading] = useState(false);
+  const [receiptError, setReceiptError] = useState("");
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -61,19 +69,31 @@ const ProjectDetails = () => {
       Number(membership.companyId) === Number(project?.companyId),
   );
 
+  const loadAvailableMembers = async () => {
+    try {
+      const response = await Client.get(
+        `/company/projects/${projectId}/available-members`,
+      );
+      setAvailableMembers(Array.isArray(response.data) ? response.data : []);
+      setAvailableError(false);
+    } catch (error) {
+      setAvailableError(true);
+    }
+  };
+
   const loadData = async () => {
     setLoading(true);
     setError("");
     setShowAddMember(false);
 
-    let dataCompanyId;
+    let projectData;
+
     try {
-      const data = await GetProjectById(projectId);
-      dataCompanyId = data.companyId;
-      setProject(data);
-      setForm(data);
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to load project.");
+      projectData = await GetProjectById(projectId);
+      setProject(projectData);
+      setForm(projectData);
+    } catch (error) {
+      setError(error.response?.data?.message || "Failed to load project.");
       setLoading(false);
       return;
     }
@@ -87,7 +107,18 @@ const ProjectDetails = () => {
     ]);
 
     if (results[0].status === "fulfilled") {
-      setMemberships(results[0].value.data.memberships || []);
+      const userMemberships = results[0].value.data.memberships || [];
+      setMemberships(userMemberships);
+
+      const owner = userMemberships.some(
+        (membership) =>
+          membership.role === "OWNER" &&
+          membership.status === "ACTIVE" &&
+          Number(membership.companyId) === Number(projectData.companyId),
+      );
+
+      if (owner) await loadAvailableMembers();
+      else setAvailableMembers([]);
     } else {
       setMemberships([]);
     }
@@ -134,38 +165,12 @@ const ProjectDetails = () => {
       setTeamError(true);
     }
 
-    if (results[0].status === "fulfilled") {
-      const owner = (results[0].value.data.memberships || []).some(
-        (membership) =>
-          membership.role === "OWNER" &&
-          membership.status === "ACTIVE" &&
-          Number(membership.companyId) === Number(dataCompanyId),
-      );
-      if (owner) {
-        await loadAvailableMembers();
-      } else {
-        setAvailableMembers([]);
-      }
-    }
-
     setLoading(false);
   };
 
   useEffect(() => {
     loadData();
   }, [projectId]);
-
-  const loadAvailableMembers = async () => {
-    try {
-      const response = await Client.get(
-        `/company/projects/${projectId}/available-members`,
-      );
-      setAvailableMembers(Array.isArray(response.data) ? response.data : []);
-      setAvailableError(false);
-    } catch (err) {
-      setAvailableError(true);
-    }
-  };
 
   const refreshTeam = async () => {
     try {
@@ -174,16 +179,18 @@ const ProjectDetails = () => {
       );
       setMembers(Array.isArray(response.data) ? response.data : []);
       setTeamError(false);
-    } catch (err) {
+    } catch (error) {
       setTeamError(true);
     }
     await loadAvailableMembers();
   };
 
-  const handleAssignMember = async (e) => {
-    e.preventDefault();
+  const handleAssignMember = async (event) => {
+    event.preventDefault();
     if (!isOwner || !selectedMember || teamSaving) return;
+
     setTeamSaving(true);
+
     try {
       const type = selectedRole === "MANAGER" ? "managers" : "workers";
       await Client.post(
@@ -192,8 +199,8 @@ const ProjectDetails = () => {
       await refreshTeam();
       setSelectedMember("");
       setShowAddMember(false);
-    } catch (err) {
-      alert(err.response?.data?.message || "Failed to assign member.");
+    } catch (error) {
+      alert(error.response?.data?.message || "Failed to assign member.");
     } finally {
       setTeamSaving(false);
     }
@@ -201,7 +208,9 @@ const ProjectDetails = () => {
 
   const handleRemoveMember = async () => {
     if (!isOwner || !memberToRemove || teamSaving) return;
+
     setTeamSaving(true);
+
     try {
       const type = memberToRemove.role === "MANAGER" ? "managers" : "workers";
       await Client.delete(
@@ -209,10 +218,28 @@ const ProjectDetails = () => {
       );
       await refreshTeam();
       setMemberToRemove(null);
-    } catch (err) {
-      alert(err.response?.data?.message || "Failed to remove member.");
+    } catch (error) {
+      alert(error.response?.data?.message || "Failed to remove member.");
     } finally {
       setTeamSaving(false);
+    }
+  };
+
+  const openExpenseDetails = async (expense) => {
+    setSelectedExpense(expense);
+    setExpenseAttachments([]);
+    setReceiptError("");
+    setReceiptLoading(true);
+
+    try {
+      const data = await GetExpenseAttachments(expense.id);
+      setExpenseAttachments(Array.isArray(data) ? data : []);
+    } catch (error) {
+      setReceiptError(
+        error.response?.data?.message || "Unable to load receipts.",
+      );
+    } finally {
+      setReceiptLoading(false);
     }
   };
 
@@ -230,7 +257,6 @@ const ProjectDetails = () => {
   const inProgress = activeTasks.filter(
     (task) => task.status === "IN_PROGRESS",
   ).length;
-
   const taskProgress = activeTasks.length
     ? Math.round((completed / activeTasks.length) * 100)
     : 0;
@@ -238,7 +264,6 @@ const ProjectDetails = () => {
   const activeExpenses = expenses.filter(
     (expense) => expense.status !== "ARCHIVED",
   );
-
   const totalExpenses = activeExpenses.reduce(
     (total, expense) => total + Number(expense.amount || 0),
     0,
@@ -257,12 +282,12 @@ const ProjectDetails = () => {
     return "bg-[#e2e4e6] text-[#35362c]";
   };
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = (event) => {
+    setForm({ ...form, [event.target.name]: event.target.value });
   };
 
-  const handleUpdate = async (e) => {
-    e.preventDefault();
+  const handleUpdate = async (event) => {
+    event.preventDefault();
     if (!isOwner) return;
 
     if (form.expectedEndDate < form.startDate) {
@@ -287,42 +312,31 @@ const ProjectDetails = () => {
       setProject(updated);
       setForm(updated);
       setEditing(false);
-    } catch (err) {
-      alert(err.response?.data?.message || "Failed to update project.");
+    } catch (error) {
+      alert(error.response?.data?.message || "Failed to update project.");
     } finally {
       setSaving(false);
     }
   };
 
   const handleArchive = async () => {
-    if (!isOwner) return;
-    if (!window.confirm("Archive this project?")) return;
+    if (!isOwner || !window.confirm("Archive this project?")) return;
 
     try {
       const updated = await ArchiveProject(projectId);
       setProject(updated);
       setForm(updated);
       setEditing(false);
-    } catch (err) {
-      alert(err.response?.data?.message || "Failed to archive project.");
+    } catch (error) {
+      alert(error.response?.data?.message || "Failed to archive project.");
     }
   };
 
   const editFields = [
     { name: "name", title: "Project Name", required: true },
     { name: "location", title: "Location", required: true },
-    {
-      name: "budget",
-      title: "Budget (BHD)",
-      type: "number",
-      required: true,
-    },
-    {
-      name: "startDate",
-      title: "Start Date",
-      type: "date",
-      required: true,
-    },
+    { name: "budget", title: "Budget (BHD)", type: "number", required: true },
+    { name: "startDate", title: "Start Date", type: "date", required: true },
     {
       name: "expectedEndDate",
       title: "Expected End Date",
@@ -330,20 +344,6 @@ const ProjectDetails = () => {
       required: true,
     },
   ];
-
-  const MemberAvatar = ({ member, manager = false }) => {
-    const name = member.name || "Unknown Member";
-
-    return (
-      <div
-        className={`flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full text-lg font-semibold ${
-          manager ? "bg-[#d4e14b]" : "bg-[#e2e4e6]"
-        }`}
-      >
-        {name.charAt(0).toUpperCase()}
-      </div>
-    );
-  };
 
   if (loading) {
     return (
@@ -372,13 +372,11 @@ const ProjectDetails = () => {
           onClick={() => navigate("/projects")}
           className="group flex items-center gap-2 text-sm font-medium hover:text-[#7a7359]"
         >
-          <ArrowLeft
-            size={17}
-            className="transition group-hover:-translate-x-1"
-          />
+          <ArrowLeft size={17} />
           Back to Projects
         </button>
 
+        {/* Project Header */}
         <div className={card}>
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -393,9 +391,7 @@ const ProjectDetails = () => {
 
             <div className="flex flex-wrap items-center gap-2">
               <span
-                className={`rounded-full px-3 py-1.5 text-xs ${statusColor(
-                  project.status,
-                )}`}
+                className={`rounded-full px-3 py-1.5 text-xs ${statusColor(project.status)}`}
               >
                 {label(project.status)}
               </span>
@@ -417,16 +413,14 @@ const ProjectDetails = () => {
                     }}
                     className="flex items-center gap-2 rounded-lg border border-[#c3c8c1] px-3 py-2 text-sm"
                   >
-                    <Pencil size={15} />
-                    Edit
+                    <Pencil size={15} /> Edit
                   </button>
 
                   <button
                     onClick={handleArchive}
                     className="flex items-center gap-2 rounded-lg bg-[#35362c] px-3 py-2 text-sm text-white"
                   >
-                    <Archive size={15} />
-                    Archive
+                    <Archive size={15} /> Archive
                   </button>
                 </>
               )}
@@ -448,6 +442,7 @@ const ProjectDetails = () => {
           </div>
         </div>
 
+        {/* Edit Project */}
         {isOwner && editing && (
           <form onSubmit={handleUpdate} className={card}>
             <h2 className="mb-6 text-2xl font-semibold">Edit Project</h2>
@@ -534,6 +529,7 @@ const ProjectDetails = () => {
         )}
 
         <div className="grid gap-5 lg:grid-cols-3">
+          {/* Project Overview */}
           <div className={`${card} lg:col-span-2`}>
             <h2 className="mb-5 text-lg font-semibold">Project Overview</h2>
 
@@ -548,9 +544,7 @@ const ProjectDetails = () => {
                 <div className="h-2 rounded-full bg-[#e2e4e6]">
                   <div
                     className="h-2 rounded-full bg-[#d4e14b]"
-                    style={{
-                      width: tasksError ? "0%" : `${taskProgress}%`,
-                    }}
+                    style={{ width: tasksError ? "0%" : `${taskProgress}%` }}
                   />
                 </div>
                 <p className="mt-2 text-xs text-[#7a7359]">
@@ -573,7 +567,7 @@ const ProjectDetails = () => {
                     style={{
                       width: expensesError
                         ? "0%"
-                        : `${Math.min(budgetProgress, 100)}%`,
+                        : `${Math.min(Math.max(budgetProgress, 0), 100)}%`,
                     }}
                   />
                 </div>
@@ -588,13 +582,14 @@ const ProjectDetails = () => {
               </div>
             </div>
 
+            {/* Recent Tasks */}
             <div className="mt-6 border-t border-[#c3c8c1] pt-4">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <h3 className="text-sm font-semibold">Recent Tasks</h3>
                 <button
                   type="button"
                   onClick={() => navigate(`/tasks?projectId=${projectId}`)}
-                  className="rounded-lg px-3 py-2 text-xs font-semibold text-[#7a7359] transition hover:bg-[#f3f5e9] hover:text-[#35362c]"
+                  className="rounded-lg px-3 py-2 text-xs font-semibold text-[#7a7359] hover:bg-[#f3f5e9]"
                 >
                   View All Tasks ({tasksError ? "N/A" : activeTasks.length})
                 </button>
@@ -618,28 +613,23 @@ const ProjectDetails = () => {
                         key={task.id}
                         type="button"
                         onClick={() => navigate(`/tasks/${task.id}`)}
-                        className="group flex w-full items-center justify-between gap-3 rounded-xl border border-[#e2e4e6] bg-white px-4 py-3 text-left transition hover:border-[#b4c25b] hover:bg-[#f8f9ef]"
+                        className="group flex w-full items-center justify-between gap-3 rounded-xl border border-[#e2e4e6] px-4 py-3 text-left hover:border-[#b4c25b] hover:bg-[#f8f9ef]"
                       >
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-[#35362c]">
+                          <p className="truncate text-sm font-medium">
                             {task.title}
                           </p>
                           <p className="mt-1 text-xs text-[#7a7359]">
                             {label(task.priority)} Priority
                           </p>
                         </div>
-
                         <div className="flex shrink-0 items-center gap-3">
                           <span
-                            className={`rounded-full px-3 py-1 text-xs ${statusColor(
-                              task.status,
-                            )}`}
+                            className={`rounded-full px-3 py-1 text-xs ${statusColor(task.status)}`}
                           >
                             {label(task.status)}
                           </span>
-                          <span className="text-lg text-[#7a7359] transition group-hover:translate-x-1">
-                            ›
-                          </span>
+                          <span className="text-lg text-[#7a7359]">›</span>
                         </div>
                       </button>
                     ))}
@@ -648,6 +638,7 @@ const ProjectDetails = () => {
             </div>
           </div>
 
+          {/* Project Team */}
           <div className={card}>
             <div className="mb-5 flex items-center justify-between gap-3">
               <div>
@@ -658,13 +649,14 @@ const ProjectDetails = () => {
                     : `${members.length} assigned members`}
                 </p>
               </div>
+
               {isOwner && project.status !== "ARCHIVED" ? (
                 <button
                   onClick={() => {
                     setShowAddMember(!showAddMember);
                     setSelectedMember("");
                   }}
-                  className="flex items-center gap-2 rounded-lg bg-[#d4e14b] px-3 py-2 text-xs font-semibold hover:bg-[#c8d63c]"
+                  className="flex items-center gap-2 rounded-lg bg-[#d4e14b] px-3 py-2 text-xs font-semibold"
                 >
                   {showAddMember ? <X size={15} /> : <UserPlus size={15} />}
                   {showAddMember ? "Close" : "Add Member"}
@@ -680,12 +672,13 @@ const ProjectDetails = () => {
                 className="mb-5 rounded-xl border border-[#c3c8c1] bg-[#f7f8f5] p-4"
               >
                 <h3 className="text-sm font-semibold">Assign to Project</h3>
+
                 <label className="mt-3 block text-xs font-medium">
                   Role
                   <select
                     value={selectedRole}
-                    onChange={(e) => {
-                      setSelectedRole(e.target.value);
+                    onChange={(event) => {
+                      setSelectedRole(event.target.value);
                       setSelectedMember("");
                     }}
                     className={input}
@@ -694,11 +687,12 @@ const ProjectDetails = () => {
                     <option value="WORKER">Worker</option>
                   </select>
                 </label>
+
                 <label className="mt-3 block text-xs font-medium">
                   Company Member
                   <select
                     value={selectedMember}
-                    onChange={(e) => setSelectedMember(e.target.value)}
+                    onChange={(event) => setSelectedMember(event.target.value)}
                     className={input}
                     disabled={availableError || selectableMembers.length === 0}
                   >
@@ -713,6 +707,7 @@ const ProjectDetails = () => {
                     ))}
                   </select>
                 </label>
+
                 {availableError ? (
                   <p className="mt-2 text-xs text-[#DC5C5C]">
                     Unable to load available members.
@@ -722,6 +717,7 @@ const ProjectDetails = () => {
                     No available {selectedRole.toLowerCase()}s.
                   </p>
                 ) : null}
+
                 <button
                   type="submit"
                   disabled={!selectedMember || teamSaving}
@@ -762,6 +758,7 @@ const ProjectDetails = () => {
                         {group.people.length}
                       </span>
                     </div>
+
                     {group.people.length === 0 ? (
                       <p className="text-sm text-[#7a7359]">{group.empty}</p>
                     ) : (
@@ -771,10 +768,15 @@ const ProjectDetails = () => {
                             key={member.membershipId}
                             className="flex items-center gap-3 rounded-lg border border-[#e2e4e6] p-2.5"
                           >
-                            <MemberAvatar
-                              member={member}
-                              manager={member.role === "MANAGER"}
-                            />
+                            <div
+                              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-lg font-semibold ${
+                                member.role === "MANAGER"
+                                  ? "bg-[#d4e14b]"
+                                  : "bg-[#e2e4e6]"
+                              }`}
+                            >
+                              {(member.name || "U").charAt(0).toUpperCase()}
+                            </div>
                             <div className="min-w-0 flex-1">
                               <p className="truncate text-sm font-semibold">
                                 {member.name}
@@ -785,12 +787,12 @@ const ProjectDetails = () => {
                                   : "Worker"}
                               </p>
                             </div>
+
                             {isOwner && project.status !== "ARCHIVED" && (
                               <button
                                 onClick={() => setMemberToRemove(member)}
                                 disabled={teamSaving}
-                                title={`Remove ${member.name}`}
-                                className="rounded-lg p-2 text-[#7a7359] hover:bg-[#fff0f0] hover:text-[#DC5C5C] disabled:opacity-50"
+                                className="rounded-lg p-2 text-[#7a7359] hover:bg-red-50 hover:text-[#DC5C5C]"
                               >
                                 <Trash2 size={16} />
                               </button>
@@ -807,15 +809,26 @@ const ProjectDetails = () => {
         </div>
 
         <div className="grid gap-5 lg:grid-cols-3">
+          {/* Recent Expenses */}
           <div className={card}>
-            <h2 className="mb-4 text-lg font-semibold">Recent Expenses</h2>
+            <div className="mb-4 flex items-center justify-between gap-2">
+              <h2 className="text-lg font-semibold">Recent Expenses</h2>
+              <button
+                type="button"
+                onClick={() => navigate(`/expenses?projectId=${projectId}`)}
+                className="rounded-lg px-2 py-2 text-xs font-semibold text-[#7a7359] hover:bg-[#f3f5e9]"
+              >
+                View All Expenses (
+                {expensesError ? "N/A" : activeExpenses.length})
+              </button>
+            </div>
 
             {expensesError ? (
               <p className="text-sm text-[#7a7359]">Unable to load expenses.</p>
             ) : activeExpenses.length === 0 ? (
               <p className="text-sm text-[#7a7359]">No expenses yet.</p>
             ) : (
-              <div className="divide-y divide-[#e2e4e6]">
+              <div className="space-y-2">
                 {[...activeExpenses]
                   .sort(
                     (a, b) =>
@@ -824,30 +837,37 @@ const ProjectDetails = () => {
                   )
                   .slice(0, 3)
                   .map((expense) => (
-                    <div
+                    <button
                       key={expense.id}
-                      className="flex justify-between gap-3 py-3"
+                      type="button"
+                      onClick={() => openExpenseDetails(expense)}
+                      className="group flex w-full items-center justify-between gap-3 rounded-xl border border-[#e2e4e6] px-3 py-3 text-left transition hover:border-[#b4c25b] hover:bg-[#f8f9ef]"
                     >
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium">
                           {expense.title}
                         </p>
-                        <p className="text-xs text-[#7a7359]">
+                        <p className="mt-1 text-xs text-[#7a7359]">
                           {label(expense.category)}
                         </p>
                       </div>
-                      <p className="shrink-0 text-sm font-semibold">
-                        {money(expense.amount)}
-                      </p>
-                    </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <p className="text-sm font-semibold">
+                          {money(expense.amount)}
+                        </p>
+                        <span className="text-lg text-[#7a7359] transition group-hover:translate-x-1">
+                          ›
+                        </span>
+                      </div>
+                    </button>
                   ))}
               </div>
             )}
           </div>
 
+          {/* Project Updates */}
           <div className={card}>
             <h2 className="mb-4 text-lg font-semibold">Project Updates</h2>
-
             {updatesError ? (
               <p className="text-sm text-[#7a7359]">Unable to load updates.</p>
             ) : updates.length === 0 ? (
@@ -868,9 +888,9 @@ const ProjectDetails = () => {
             )}
           </div>
 
+          {/* Project Information */}
           <div className={card}>
             <h2 className="mb-4 text-lg font-semibold">Project Information</h2>
-
             <div className="space-y-4 text-sm">
               {[
                 ["Start Date", project.startDate || "-"],
@@ -884,7 +904,6 @@ const ProjectDetails = () => {
                 </div>
               ))}
             </div>
-
             <div className="mt-5 border-t border-[#c3c8c1] pt-4">
               <p className="text-xs text-[#7a7359]">Description</p>
               <p className="mt-2 line-clamp-3 text-sm">
@@ -894,20 +913,136 @@ const ProjectDetails = () => {
           </div>
         </div>
 
+        {/* Expense Details Modal */}
+        {selectedExpense && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#35362c]/50 p-4">
+            <div
+              role="dialog"
+              aria-modal="true"
+              className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-[#f5f6f3] p-5 shadow-2xl md:p-6"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs uppercase tracking-wider text-[#7a7359]">
+                    Expense Details · #{selectedExpense.id}
+                  </p>
+                  <h2 className="mt-1 text-xl font-semibold">
+                    {selectedExpense.title}
+                  </h2>
+                </div>
+                <button
+                  onClick={() => setSelectedExpense(null)}
+                  className="rounded-lg p-2 hover:bg-[#e2e4e6]"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[#d4e14b] px-5 py-3">
+                <span className="text-sm font-medium">Expense Amount</span>
+                <span className="text-2xl font-semibold">
+                  {money(selectedExpense.amount)}
+                </span>
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-4 rounded-xl bg-white p-4 text-sm md:grid-cols-3">
+                {[
+                  ["Project", selectedExpense.projectName || project.name],
+                  ["Category", label(selectedExpense.category)],
+                  [
+                    "Expense Date",
+                    selectedExpense.expenseDateTime
+                      ? new Date(
+                          selectedExpense.expenseDateTime,
+                        ).toLocaleString("en-GB")
+                      : "—",
+                  ],
+                  ["Recorded By", selectedExpense.memberName],
+                  ["Status", label(selectedExpense.status)],
+                ].map(([title, value]) => (
+                  <div key={title}>
+                    <p className="text-xs text-[#7a7359]">{title}</p>
+                    <p className="mt-1 break-words font-medium">
+                      {value || "—"}
+                    </p>
+                  </div>
+                ))}
+
+                <div className="col-span-2 border-t border-[#e2e4e6] pt-3 md:col-span-3">
+                  <p className="font-semibold">Description</p>
+                  <p className="mt-1 whitespace-pre-wrap text-[#7a7359]">
+                    {selectedExpense.description || "No description provided."}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-xl bg-white p-4">
+                <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+                  <ImagePlus size={17} /> Receipts & Attachments
+                </h3>
+
+                {receiptLoading ? (
+                  <p className="text-sm text-[#7a7359]">Loading receipts...</p>
+                ) : receiptError ? (
+                  <p className="text-sm text-red-700">{receiptError}</p>
+                ) : expenseAttachments.length === 0 ? (
+                  <p className="rounded-lg border border-dashed p-4 text-center text-sm text-[#7a7359]">
+                    No receipts uploaded.
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap justify-center gap-3">
+                    {expenseAttachments.map((attachment) => (
+                      <a
+                        key={attachment.id}
+                        href={attachment.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full max-w-[220px] overflow-hidden rounded-lg border border-[#c3c8c1] hover:shadow-md"
+                      >
+                        <div className="flex h-36 items-center justify-center bg-[#f5f6f3] p-2">
+                          <img
+                            src={attachment.fileUrl}
+                            alt={attachment.fileName || "Expense receipt"}
+                            className="max-h-full max-w-full object-contain"
+                          />
+                        </div>
+                        <div className="flex items-center justify-between gap-2 border-t px-3 py-2">
+                          <span className="truncate text-xs">
+                            {attachment.fileName}
+                          </span>
+                          <ExternalLink size={13} />
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-4 flex justify-end">
+                <button
+                  onClick={() => setSelectedExpense(null)}
+                  className="rounded-lg border border-[#c3c8c1] bg-white px-5 py-2.5 text-sm font-medium"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Remove Member Modal */}
         {memberToRemove && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#35362c]/50 p-4">
             <div
               role="dialog"
               aria-modal="true"
-              aria-labelledby="remove-member-title"
               className="w-full max-w-md rounded-2xl border border-[#c3c8c1] bg-white p-6 shadow-2xl"
             >
               <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-red-50 text-[#DC5C5C]">
                 <Trash2 size={22} />
               </div>
-              <h2 id="remove-member-title" className="text-xl font-semibold">
-                Remove team member?
-              </h2>
+
+              <h2 className="text-xl font-semibold">Remove team member?</h2>
               <p className="mt-2 text-sm leading-6 text-[#7a7359]">
                 Are you sure you want to remove{" "}
                 <span className="font-semibold text-[#35362c]">
@@ -916,20 +1051,19 @@ const ProjectDetails = () => {
                 from this project? They will no longer be assigned to the
                 project.
               </p>
+
               <div className="mt-7 flex justify-end gap-3">
                 <button
-                  type="button"
                   onClick={() => setMemberToRemove(null)}
                   disabled={teamSaving}
-                  className="rounded-lg border border-[#c3c8c1] px-5 py-2.5 text-sm font-medium transition hover:bg-[#e2e4e6] disabled:opacity-50"
+                  className="rounded-lg border border-[#c3c8c1] px-5 py-2.5 text-sm font-medium"
                 >
                   Cancel
                 </button>
                 <button
-                  type="button"
                   onClick={handleRemoveMember}
                   disabled={teamSaving}
-                  className="rounded-lg bg-[#DC5C5C] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-red-700 disabled:opacity-50"
+                  className="rounded-lg bg-[#DC5C5C] px-5 py-2.5 text-sm font-medium text-white disabled:opacity-50"
                 >
                   {teamSaving ? "Removing..." : "Remove Member"}
                 </button>

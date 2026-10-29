@@ -1,17 +1,74 @@
-# React + Vite
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+# Arqemio - Frontend
 
-Currently, two official plugins are available:
+Arqemio is a construction project management system designed to help construction companies manage projects, workers, tasks, expenses, and equipment in one place.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+This repository contains the frontend application for Arqemio.
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- React.js
+- Vite
+- Tailwind CSS
+- JavaScript
+- Axios
 
-## Expanding the ESLint configuration
+## Features
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
-# Arqemio-frontend
+- Role-based dashboards (Admin, Owner, Manager, Worker)
+- Company and project management
+- Task creation and worker assignments
+- Project progress tracking
+- Expense and equipment management
+- Real-time notifications
+- File attachments
+
+## Getting Started
+
+### 1. Clone the Repository
+
+```bash
+git clone <FRONTEND_REPOSITORY_URL>
+cd <FRONTEND_FOLDER>
+```
+
+### 2. Install Dependencies
+
+```bash
+npm install
+```
+
+### 3. Environment Variables
+
+Create a `.env` file in the root directory:
+
+```env
+VITE_API_URL=http://localhost:8080
+```
+
+Update the variable name if your API configuration uses a different one.
+
+### 4. Run the Application
+
+```bash
+npm run dev
+```
+
+Open the local URL displayed in your terminal.
+
+## Backend Repository
+
+The backend is built with Java Spring Boot and PostgreSQL.
+
+[Arqemio Backend - GitHub](https://github.com/Bodoorr/Arqemio)
+
+## Deployment
+
+- **Frontend:** [Live Website](FRONTEND_DEPLOYMENT_URL)
+- **Backend:** [Backend API](BACKEND_DEPLOYMENT_URL)
+
+Replace the deployment links with your actual URLs once deployed.
+
+## Project
+
+Arqemio - Construction Project Management System

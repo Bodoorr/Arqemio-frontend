@@ -13,6 +13,7 @@ import {
   GetCompanies,
   InviteCompanyOwner,
 } from "../../services/company";
+import { toast } from "sonner";
 
 const emptyCompany = {
   name: "",
@@ -79,7 +80,7 @@ const AdminDashboard = () => {
     try {
       const company = await CreateCompany(companyForm);
 
-      setMessage("Company created successfully.");
+      toast.success("Company created successfully.");
       setModal(null);
       setCompanyForm(emptyCompany);
 
@@ -92,7 +93,7 @@ const AdminDashboard = () => {
 
       await loadCompanies();
     } catch (err) {
-      setMessage(err.response?.data?.message || "Unable to create company.");
+      toast.error(err.response?.data?.message || "Unable to create company.");
     } finally {
       setSaving(false);
     }
@@ -110,11 +111,11 @@ const AdminDashboard = () => {
         role: "OWNER",
       });
 
-      setMessage("Owner invitation sent successfully.");
+      toast.success("Owner invitation sent successfully.");
       setModal(null);
       setInviteForm({ companyId: "", email: "" });
     } catch (err) {
-      setMessage(err.response?.data?.message || "Unable to send invitation.");
+      toast.error(err.response?.data?.message || "Unable to send invitation.");
     } finally {
       setSaving(false);
     }

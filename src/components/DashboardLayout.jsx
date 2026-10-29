@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import Navbar from "./Navbar";
 import Sidebar from "./Sidebar";
@@ -7,6 +7,7 @@ import NotificationListener from "./NotificationListener";
 const DashboardLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
   const { pathname } = useLocation();
 
   const role = pathname.startsWith("/admin")
@@ -26,14 +27,48 @@ const DashboardLayout = () => {
     role,
   };
 
+  const handleNotification = useCallback((message) => {
+    setNotifications((previous) =>
+      [
+        {
+          id: crypto.randomUUID(),
+          message,
+          createdAt: new Date().toISOString(),
+          read: false,
+        },
+        ...previous,
+      ].slice(0, 30),
+    );
+  }, []);
+
+  const markAllAsRead = () => {
+    setNotifications((previous) =>
+      previous.map((notification) => ({
+        ...notification,
+        read: true,
+      })),
+    );
+  };
+
+  const markAsRead = (id) => {
+    setNotifications((previous) =>
+      previous.map((notification) =>
+        notification.id === id ? { ...notification, read: true } : notification,
+      ),
+    );
+  };
+
   return (
     <div className="flex min-h-screen flex-col bg-[#f5f6f3] text-[#35362c] lg:h-screen lg:overflow-hidden">
-      <NotificationListener />
+      <NotificationListener onNotification={handleNotification} />
 
       <Navbar
         isAuthenticated={true}
         user={user}
         onMenuClick={() => setMobileOpen(true)}
+        notifications={notifications}
+        onMarkAllRead={markAllAsRead}
+        onMarkRead={markAsRead}
       />
 
       <div className="flex min-h-0 flex-1">

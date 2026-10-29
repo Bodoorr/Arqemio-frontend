@@ -2,11 +2,13 @@ import { useEffect } from "react";
 import { toast } from "sonner";
 import { SubscribeToNotifications } from "../services/notification";
 
-const NotificationListener = () => {
+const NotificationListener = ({ onNotification }) => {
   useEffect(() => {
     const controller = new AbortController();
 
     SubscribeToNotifications(controller.signal, (message) => {
+      onNotification(message);
+
       toast(message, {
         description: "Arqemio Notification",
         duration: 5000,
@@ -18,7 +20,7 @@ const NotificationListener = () => {
     });
 
     return () => controller.abort();
-  }, []);
+  }, [onNotification]);
 
   return null;
 };

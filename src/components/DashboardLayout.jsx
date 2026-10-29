@@ -1,27 +1,41 @@
 import { useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import Navbar from "./Navbar";
 import Sidebar from "./Sidebar";
 
 const DashboardLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { pathname } = useLocation();
+
+  const role = pathname.startsWith("/admin")
+    ? "PLATFORM_ADMIN"
+    : pathname.startsWith("/owner")
+      ? "OWNER"
+      : pathname.startsWith("/manager")
+        ? "MANAGER"
+        : pathname.startsWith("/worker")
+          ? "WORKER"
+          : pathname.startsWith("/customer")
+            ? "CUSTOMER"
+            : null;
 
   const user = {
     name: "My Account",
-    role: "OWNER",
+    role,
   };
 
   return (
     <div className="flex min-h-screen flex-col bg-[#f5f6f3] text-[#35362c] lg:h-screen lg:overflow-hidden">
+      {" "}
       <Navbar
         isAuthenticated={true}
         user={user}
         onMenuClick={() => setMobileOpen(true)}
       />
-
       <div className="flex min-h-0 flex-1">
         <Sidebar
+          role={role}
           collapsed={collapsed}
           setCollapsed={setCollapsed}
           mobileOpen={mobileOpen}

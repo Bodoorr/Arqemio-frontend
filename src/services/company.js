@@ -14,3 +14,6 @@ export const CreateCompany = async (data) => {
   const res = await Client.post("/company", data);
   return res.data;
 };
+
+export const InviteCompanyOwner = async (data) =>
+  (await Client.post("/invitation", data)).data;

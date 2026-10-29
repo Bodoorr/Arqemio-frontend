@@ -1,56 +1,15 @@
 import { NavLink } from "react-router-dom";
-import {
-  LayoutDashboard,
-  FolderKanban,
-  Building2,
-  Users,
-  ScrollText,
-  UserRound,
-  Settings,
-  PanelLeftClose,
-  PanelLeftOpen,
-  X,
-} from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
+import { navigationByRole } from "../config/navigation";
 
-const navigation = [
-  {
-    label: "Dashboard",
-    path: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    label: "Projects",
-    path: "/projects",
-    icon: FolderKanban,
-  },
-  {
-    label: "Companies",
-    path: "/companies",
-    icon: Building2,
-  },
-  {
-    label: "Team",
-    path: "/team",
-    icon: Users,
-  },
-  {
-    label: "Audit Logs",
-    path: "/audit-logs",
-    icon: ScrollText,
-  },
-  {
-    label: "Profile",
-    path: "/profile",
-    icon: UserRound,
-  },
-  {
-    label: "Settings",
-    path: "/settings",
-    icon: Settings,
-  },
-];
-
-const Sidebar = ({ collapsed, setCollapsed, mobileOpen, setMobileOpen }) => {
+const Sidebar = ({
+  role,
+  collapsed,
+  setCollapsed,
+  mobileOpen,
+  setMobileOpen,
+}) => {
+  const navigation = navigationByRole[role] || [];
   const renderLinks = () =>
     navigation.map(({ label, path, icon: Icon }) => (
       <NavLink

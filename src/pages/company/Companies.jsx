@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight, Building2, Plus, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { GetCompanies, CreateCompany } from "../../services/Company";
+import { GetCompanies, CreateCompany } from "../../services/company";
 import ErrorMessage from "../../components/ErrorMessage";
 
 const Companies = () => {
@@ -84,7 +84,7 @@ const Companies = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#e2e4e6] px-5 py-8 text-[#35362c] md:px-12">
+    <div className="min-h-screen bg-transparent px-5 py-8 text-[#35362c] md:px-12">
       <main className="mx-auto max-w-6xl">
         <button
           type="button"

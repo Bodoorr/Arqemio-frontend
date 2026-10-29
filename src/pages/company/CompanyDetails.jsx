@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, Building2, Mail, Send, UserRound } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
-import { GetCompanyById } from "../../services/Company";
-import { SendInvitation } from "../../services/Invitation";
+import { GetCompanyById } from "../../services/company";
+import { SendInvitation } from "../../services/invitation";
 import ErrorMessage from "../../components/ErrorMessage";
 
 const CompanyDetails = () => {
@@ -72,7 +72,7 @@ const CompanyDetails = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#e2e4e6] px-5 py-8 text-[#35362c] md:px-12">
+    <div className="min-h-screen bg-transparent px-5 py-8 text-[#35362c] md:px-12">
       <main className="mx-auto max-w-6xl">
         <button
           type="button"
@@ -89,7 +89,6 @@ const CompanyDetails = () => {
           <ErrorMessage message={error} />
         ) : company ? (
           <>
-            {/* Company header */}
             <div className="mb-10 flex flex-wrap items-end justify-between gap-5">
               <div>
                 <p className="mb-3 text-xs uppercase tracking-[0.15em] text-[#7a7359]">
@@ -111,7 +110,6 @@ const CompanyDetails = () => {
             </div>
 
             <div className="grid gap-5 md:grid-cols-3">
-              {/* Company information */}
               <section className="rounded-xl border border-[#c3c8c1] bg-white/75 p-7 md:col-span-2">
                 <div className="mb-8 flex items-center gap-3">
                   <Building2 size={20} />
@@ -165,14 +163,12 @@ const CompanyDetails = () => {
                 </div>
               </section>
 
-              {/* Company owners */}
               <section className="h-fit rounded-xl border border-[#c3c8c1] bg-white/75 p-7">
                 <div className="mb-4 flex items-center gap-3">
                   <UserRound size={20} />
                   <h2 className="text-lg font-medium">Company owners</h2>
                 </div>
 
-                {/* Primary owner */}
                 {company.ownerName ? (
                   <div className="mb-6 rounded-lg bg-[#e2e4e6]/60 p-4">
                     <p className="mb-3 text-xs uppercase tracking-wider text-[#7a7359]">
@@ -203,7 +199,6 @@ const CompanyDetails = () => {
                   </div>
                 )}
 
-                {/* Invite additional owner */}
                 <div className="border-t border-[#c3c8c1] pt-6">
                   <div className="mb-3 flex items-center gap-2">
                     <Mail size={17} />

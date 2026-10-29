@@ -60,7 +60,6 @@ const App = () => {
         element={<InvitationRegister />}
       />
       <Route path="/invitation/:token" element={<InvitationAccept />} />
-      <Route path="/admin/dashboard" element={<AdminDashboard />} />
       <Route path="/admin/companies" element={<Companies />} />
       <Route path="/admin/companies/:companyId" element={<CompanyDetails />} />
       <Route path="/projects" element={<Projects />} />
@@ -75,7 +74,9 @@ const App = () => {
       <Route path="/project-preview/:token" element={<ProjectPreview />} />
       <Route path="/customer/register/:token" element={<CustomerRegister />} />
       <Route path="/customer/dashboard" element={<CustomerDashboard />} />
-      <Route element={<DashboardLayout />} />
+      <Route element={<DashboardLayout />}>
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+      </Route>
     </Routes>
   );
 };

@@ -28,6 +28,7 @@ import Profile from "./pages/profile/Profile";
 import { Toaster } from "sonner";
 import OwnerDashboard from "./pages/dahsboards/OwnerDashboard";
 import Client from "./services/api";
+import WorkerDashboard from "./pages/dahsboards/WorkerDashboard";
 
 const App = () => {
   const navigate = useNavigate();
@@ -138,9 +139,9 @@ const App = () => {
       case "OWNER":
         return "/owner/dashboard";
       case "MANAGER":
-        return "/projects";
+        return "/manager/dashboard";
       case "WORKER":
-        return "/projects";
+        return "/worker/dashboard";
       case "CUSTOMER":
         return "/customer/dashboard";
       default:
@@ -309,6 +310,10 @@ const App = () => {
           />
         </Route>
 
+        <Route
+          path="/worker/dashboard"
+          element={protect(<WorkerDashboard />, ["WORKER"])}
+        />
         <Route
           path="/unauthorized"
           element={

@@ -30,6 +30,7 @@ import OwnerDashboard from "./pages/dahsboards/OwnerDashboard";
 import Client from "./services/api";
 import WorkerDashboard from "./pages/dahsboards/WorkerDashboard";
 import ManagerDashboard from "./pages/dahsboards/ManagerDashboard";
+import LandingPage from "./pages/LandingPage";
 
 const App = () => {
   const navigate = useNavigate();
@@ -169,6 +170,7 @@ const App = () => {
       />
 
       <Routes>
+        <Route path="/" element={<LandingPage />} />
         <Route
           path="/login"
           element={
@@ -181,25 +183,18 @@ const App = () => {
             )
           }
         />
-
         <Route path="/forgot-password" element={<ForgetPassword />} />
-
         <Route path="/reset-password/:token" element={<ResetPassword />} />
-
         <Route
           path="/invitation/register/:token"
           element={<InvitationRegister />}
         />
-
         <Route path="/invitation/:token" element={<InvitationAccept />} />
-
         <Route path="/project-preview/:token" element={<ProjectPreview />} />
-
         <Route
           path="/customer/register/:token"
           element={<CustomerRegister />}
         />
-
         <Route
           element={protect(
             <DashboardLayout role={role} profile={currentUser} />,
@@ -319,7 +314,6 @@ const App = () => {
             element={protect(<AuditLogs role="OWNER" />, ["OWNER"])}
           />
         </Route>
-
         <Route
           path="/unauthorized"
           element={
@@ -342,8 +336,7 @@ const App = () => {
             </div>
           }
         />
-
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />{" "}
       </Routes>
     </>
   );
